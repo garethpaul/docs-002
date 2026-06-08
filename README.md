@@ -2,7 +2,7 @@
 
 ## Overview
 
-`garethpaul/docs-002` is a JavaScript web application or frontend sample. No GitHub description is currently set.
+`garethpaul/docs-002` is a JavaScript web application or frontend sample. The checked-in files describe a JavaScript web application or frontend sample with the structure summarized below.
 
 This README is based on the checked-in source, manifests, scripts, and repository metadata on the `main` branch. The project language mix found during review was: React TSX (4), TypeScript (1).
 
@@ -77,10 +77,4 @@ When the required SDK or runtime is unavailable, use static checks and source re
 ## Contributing
 
 Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
-
-## Existing Project Notes
-
-Prior README summary:
-
-> Try Now Docs <!-- README-OVERVIEW-IMAGE --> This allows folks to proxy API requests and speed up onboarding via the docs. Get Started `npm install` Dev View on localhost:5000 `npm run dev` Build
 
