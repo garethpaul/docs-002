@@ -1,9 +1,7 @@
 import React, { ReactNode } from "react";
-import Link from "next/link";
 import Head from "next/head";
 import Navigation from "./Navigation";
 import styles from "./Layout.module.css";
-import Editor from "./Editor";
 
 type Props = {
   children?: ReactNode;
@@ -15,8 +13,6 @@ const Layout: React.FC<Props> = ({
   children,
   title = "Home | Next.js + TypeScript Example",
 }) => {
-  const [codeContent, setCodeContent] = React.useState("");
-
   return (
     <div className={styles.layout}>
       <Head>

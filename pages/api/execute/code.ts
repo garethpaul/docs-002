@@ -1,120 +1,394 @@
-// pages/api/execute.js
-import OpenAI from 'openai';
-import parser from "@babel/parser";
+import type { NextApiRequest, NextApiResponse } from "next";
+import OpenAI from "openai";
+import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
+import type {
+  ArrayExpression,
+  Expression,
+  MemberExpression,
+  ObjectExpression,
+  ObjectProperty,
+} from "@babel/types";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+type ChatCompletionParams = {
+  model: string;
+  messages: ChatMessage[];
+  max_tokens: number;
+  temperature?: number;
+  top_p?: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+  stop?: string | string[];
+  response_format?: { type: "text" | "json_object" };
+};
+type ErrorResponse = { error: string };
 
-function extractParameters(code) {
-    try {
-      const ast = parser.parse(code, {
-        sourceType: "module"
-      });
-  
-      let params = null;
-  
-      traverse(ast, {
-        CallExpression(path) {
-          const node = path.node;
+const MAX_CODE_LENGTH = 12000;
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_CONTENT_LENGTH = 8000;
+const MAX_COMPLETION_TOKENS = 2048;
+const DEFAULT_COMPLETION_TOKENS = 512;
+const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
+const ALLOWED_PARAMETER_NAMES = new Set([
+  "model",
+  "messages",
+  "temperature",
+  "top_p",
+  "max_tokens",
+  "presence_penalty",
+  "frequency_penalty",
+  "stop",
+  "response_format",
+]);
+const DEFAULT_ALLOWED_MODELS = ["gpt-3.5-turbo", "gpt-4o-mini"];
 
-          // Check if it's openai.chat.completions.create
-          if (
-              node.callee.type === "MemberExpression" &&
-              node.callee.object.type === "MemberExpression" &&
-              node.callee.object.object.name === "openai" &&
-              node.callee.object.property.name === "chat" &&
-              node.callee.property.name === "completions"
-          ) {
-            const calleeNode = path.parentPath.node;
-            if (calleeNode && calleeNode.callee.property.name === "create") {
-              params = {};
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "16kb",
+    },
+  },
+};
 
-              // Extract properties from the argument object
-              calleeNode.arguments.forEach(arg => {
-                if (arg.type === "ObjectExpression") {
-                  arg.properties.forEach(prop => {
-                    if (prop.key.type === "Identifier") {
-                      const keyName = prop.key.name;
-
-                      // Handle array of objects like "messages"
-                      if (prop.value.type === "ArrayExpression") {
-                        params[keyName] = prop.value.elements.map(element => {
-                          let obj = {};
-                          if (element.type === "ObjectExpression") {
-                            element.properties.forEach(innerProp => {
-                              if (innerProp.key.type === "Identifier") {
-                                const innerKeyName = innerProp.key.name;
-                                const innerValue = innerProp.value.value;
-                                obj[innerKeyName] = innerValue;
-                              }
-                            });
-                          }
-                          return obj;
-                        });
-                      } else {
-                        // This handles simple literals like String, Number, etc.
-                        const value = prop.value.type === "StringLiteral" ? prop.value.value : prop.value.name;
-                        params[keyName] = value;
-                      }
-                    }
-                  });
-                }
-              });
-            }
-          }
-        }
-      });
-  
-      return params;
-    } catch (error) {
-      console.error("Error in extractParameters:", error);  // Log the error for debugging
-      return null;
-    }
+function isNamedMember(expression: unknown, propertyName: string): expression is MemberExpression {
+  const member = expression as MemberExpression;
+  return (
+    member?.type === "MemberExpression" &&
+    !member.computed &&
+    member.property.type === "Identifier" &&
+    member.property.name === propertyName
+  );
 }
 
+function isOpenAIChatCompletionsCreate(callee: unknown) {
+  if (!isNamedMember(callee, "create")) {
+    return false;
+  }
 
-  export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-      return res.status(405).end();
+  const completions = callee.object;
+  if (!isNamedMember(completions, "completions")) {
+    return false;
+  }
+
+  const chat = completions.object;
+  if (!isNamedMember(chat, "chat")) {
+    return false;
+  }
+
+  return chat.object.type === "Identifier" && chat.object.name === "openai";
+}
+
+function propertyName(property: ObjectProperty) {
+  if (property.computed) {
+    return null;
+  }
+  if (property.key.type === "Identifier") {
+    return property.key.name;
+  }
+  if (property.key.type === "StringLiteral") {
+    return property.key.value;
+  }
+  return null;
+}
+
+function literalValue(expression: Expression): JsonValue | undefined {
+  switch (expression.type) {
+    case "StringLiteral":
+    case "NumericLiteral":
+    case "BooleanLiteral":
+      return expression.value;
+    case "NullLiteral":
+      return null;
+    case "UnaryExpression":
+      if (expression.operator === "-" && expression.argument.type === "NumericLiteral") {
+        return -expression.argument.value;
+      }
+      return undefined;
+    case "ArrayExpression":
+      return arrayValue(expression);
+    case "ObjectExpression":
+      return objectValue(expression);
+    default:
+      return undefined;
+  }
+}
+
+function arrayValue(expression: ArrayExpression): JsonValue[] | undefined {
+  const values: JsonValue[] = [];
+
+  for (const element of expression.elements) {
+    if (!element || element.type === "SpreadElement") {
+      return undefined;
     }
-  
-    let code = req.body.code;
-    const regex = /await openai\.chat\.completions\.create\(\{\s*([\s\S]*?)\s*\}\);/m;
-    const match = code.match(regex);
-    
-    var params = match[1].replace(/\n/g, ''); // removes newlines
-        // remove /n from params
-        params = params.replace(/\\n/g, '');
-        params = params.replace(/\n/g, '');
-        // convert params to object
 
-        const formattedStr = `{${params
-          .replace(/'/g, '"')                // replace single quotes with double quotes
-          .replace(/([a-zA-Z0-9_]+):/g, '"$1":')   // enclose property names in double quotes
-          .replace(/,\s*$/, '')}}`;           // remove any trailing commas and enclose in curly braces
-        
-        console.log(formattedStr)
-        let paramsObj;
-        try {
-            paramsObj = JSON.parse(formattedStr);
-            console.log(paramsObj);
-        } catch (err) {
-            console.error("Failed to parse JSON:", err.message, formattedStr);
+    const value = literalValue(element);
+    if (value === undefined) {
+      return undefined;
+    }
+    values.push(value);
+  }
+
+  return values;
+}
+
+function objectValue(expression: ObjectExpression): JsonObject | undefined {
+  const value: JsonObject = {};
+
+  for (const property of expression.properties) {
+    if (property.type !== "ObjectProperty") {
+      return undefined;
+    }
+
+    const name = propertyName(property);
+    if (!name) {
+      return undefined;
+    }
+    if (Object.prototype.hasOwnProperty.call(value, name)) {
+      return undefined;
+    }
+
+    const propertyValue = literalValue(property.value as Expression);
+    if (propertyValue === undefined) {
+      return undefined;
+    }
+
+    value[name] = propertyValue;
+  }
+
+  return value;
+}
+
+export function extractParameters(code: string): JsonObject | null {
+  try {
+    const ast = parse(code, {
+      sourceType: "module",
+      plugins: ["typescript", "jsx"],
+    });
+
+    let params: JsonObject | null = null;
+    let matchCount = 0;
+
+    traverse(ast, {
+      CallExpression(path) {
+        if (!isOpenAIChatCompletionsCreate(path.node.callee)) {
+          return;
         }
 
-        const pars = paramsObj;
-  
-    try {
+        const [argument] = path.node.arguments;
+        if (!argument || argument.type !== "ObjectExpression") {
+          params = null;
+          path.stop();
+          return;
+        }
 
+        matchCount += 1;
+        params = objectValue(argument) ?? null;
+      },
+    });
 
-
-      const completion = await openai.chat.completions.create(pars);
-  
-      res.status(200).json(completion.choices);
-    } catch (error) {
-      console.error("OpenAI API call error:", error);  // More specific logging
-      res.status(500).json({ error: error.message });
-    }
+    return matchCount === 1 ? params : null;
+  } catch {
+    return null;
   }
+}
+
+function allowedModels() {
+  const configuredModels = process.env.OPENAI_ALLOWED_MODELS?.split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+  return new Set(configuredModels?.length ? configuredModels : DEFAULT_ALLOWED_MODELS);
+}
+
+function numberInRange(
+  value: JsonValue | undefined,
+  min: number,
+  max: number,
+  integer = false,
+) {
+  if (typeof value !== "number" || value < min || value > max) {
+    return null;
+  }
+  if (integer && !Number.isInteger(value)) {
+    return null;
+  }
+  return value;
+}
+
+function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MESSAGES) {
+    return null;
+  }
+
+  let totalContentLength = 0;
+  const messages: ChatMessage[] = [];
+
+  for (const message of value) {
+    if (!message || typeof message !== "object" || Array.isArray(message)) {
+      return null;
+    }
+
+    const role = message.role;
+    const content = message.content;
+    if (
+      typeof role !== "string" ||
+      !ALLOWED_MESSAGE_ROLES.has(role) ||
+      typeof content !== "string" ||
+      content.length === 0 ||
+      content.length > MAX_MESSAGE_CONTENT_LENGTH
+    ) {
+      return null;
+    }
+
+    totalContentLength += content.length;
+    if (totalContentLength > MAX_MESSAGE_CONTENT_LENGTH) {
+      return null;
+    }
+
+    messages.push({ role: role as ChatMessage["role"], content });
+  }
+
+  return messages;
+}
+
+function normalizeStop(value: JsonValue | undefined) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "string" && value.length > 0 && value.length <= 100) {
+    return value;
+  }
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= 4 &&
+    value.every((entry) => typeof entry === "string" && entry.length > 0 && entry.length <= 100)
+  ) {
+    return value as string[];
+  }
+  return null;
+}
+
+function normalizeResponseFormat(
+  value: JsonValue | undefined,
+): ChatCompletionParams["response_format"] | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const keys = Object.keys(value);
+  if (keys.length !== 1 || keys[0] !== "type") {
+    return null;
+  }
+  const responseType = value.type;
+  if (responseType !== "text" && responseType !== "json_object") {
+    return null;
+  }
+  return { type: responseType };
+}
+
+export function normalizeChatRequest(params: JsonObject | null): ChatCompletionParams | null {
+  if (!params || Object.keys(params).some((name) => !ALLOWED_PARAMETER_NAMES.has(name))) {
+    return null;
+  }
+
+  const model = params.model;
+  if (typeof model !== "string" || model.trim() === "" || !allowedModels().has(model)) {
+    return null;
+  }
+
+  const messages = normalizeMessages(params.messages);
+  if (!messages) {
+    return null;
+  }
+
+  const maxTokens =
+    params.max_tokens === undefined
+      ? DEFAULT_COMPLETION_TOKENS
+      : numberInRange(params.max_tokens, 1, MAX_COMPLETION_TOKENS, true);
+  const normalized: ChatCompletionParams = { model, messages, max_tokens: maxTokens ?? 0 };
+  if (!maxTokens) {
+    return null;
+  }
+
+  const numericOptions = [
+    ["temperature", 0, 2],
+    ["top_p", 0, 1],
+    ["presence_penalty", -2, 2],
+    ["frequency_penalty", -2, 2],
+  ] as const;
+
+  for (const [name, min, max] of numericOptions) {
+    if (params[name] === undefined) {
+      continue;
+    }
+    const value = numberInRange(params[name], min, max);
+    if (value === null) {
+      return null;
+    }
+    normalized[name] = value;
+  }
+
+  const stop = normalizeStop(params.stop);
+  if (stop === null) {
+    return null;
+  }
+  if (stop !== undefined) {
+    normalized.stop = stop;
+  }
+
+  const responseFormat = normalizeResponseFormat(params.response_format);
+  if (responseFormat === null) {
+    return null;
+  }
+  if (responseFormat !== undefined) {
+    normalized.response_format = responseFormat;
+  }
+
+  return normalized;
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<unknown | ErrorResponse>,
+) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (typeof req.body?.code !== "string") {
+    return res.status(400).json({ error: "Request body must include a code string" });
+  }
+
+  if (req.body.code.length > MAX_CODE_LENGTH) {
+    return res.status(413).json({ error: "Code sample is too large" });
+  }
+
+  const params = normalizeChatRequest(extractParameters(req.body.code));
+  if (!params) {
+    return res.status(400).json({
+      error: "Code must contain a literal, allowed openai.chat.completions.create request",
+    });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(503).json({ error: "OPENAI_API_KEY is not configured" });
+  }
+
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await openai.chat.completions.create(
+      params as ChatCompletionCreateParamsNonStreaming,
+    );
+    return res.status(200).json(completion.choices);
+  } catch {
+    return res.status(502).json({ error: "OpenAI request failed" });
+  }
+}

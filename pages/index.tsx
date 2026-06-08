@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Layout from "../components/Layout";
 import "@radix-ui/themes/styles.css";
 import "@radix-ui/colors/black-alpha.css";
@@ -7,9 +6,8 @@ import "@radix-ui/colors/mauve.css";
 import "@radix-ui/colors/purple.css";
 import "@radix-ui/colors/violet.css";
 import { Theme } from "@radix-ui/themes";
-import Navigation from "../components/Navigation";
 import Editor from "../components/Editor";
-import { Flex, Text, Button } from "@radix-ui/themes";
+import { Flex } from "@radix-ui/themes";
 
 const IndexPage = () => (
   <Theme appearance="dark">

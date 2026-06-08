@@ -16,21 +16,30 @@ The current focus is:
 Priority:
 
 - Preserve the docs onboarding flow shown in the README screenshot
-- Keep `npm run dev`, `npm run build`, and `npm run type-check` meaningful
+- Keep `npm run dev`, `npm run build`, `npm run type-check`, and `npm test`
+  meaningful
 - Avoid committing API keys or proxy secrets
 - Keep editor and navigation components reviewable
 
+Current baseline:
+
+- The execute API accepts only static `openai.chat.completions.create({ ... })`
+  examples with bounded literal parameters.
+- Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
+  when maintainers need a narrower model allow-list.
+- The editor sends the current code string directly and avoids logging prompt
+  content, parsed parameters, or provider responses.
+
 Next priorities:
 
-- Document environment variables and proxy behavior
-- Add tests or checks around editor parsing and request proxy boundaries
-- Pin or intentionally manage framework dependency versions
-- Clarify which docs flows are prototype-only versus intended product behavior
+- Expand execute API tests when the accepted request shape grows.
+- Keep framework dependency versions pinned or intentionally managed.
+- Clarify which docs flows are prototype-only versus intended product behavior.
 
 Contribution rules:
 
 - One PR = one focused docs UX, editor, API proxy, or tooling change.
-- Run `npm run type-check` and `npm run build` before pushing code changes.
+- Run `npm test` before pushing code changes.
 - Keep secrets in environment configuration.
 - Update screenshots or README notes when the visible docs flow changes.
 
