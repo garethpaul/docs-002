@@ -42,7 +42,7 @@ session secrets, or upstream API tokens.
 Proxy routes should validate inputs, constrain destinations, and avoid logging
 sensitive request content.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Committed API keys or proxy credentials
 - Open proxy behavior without validation
