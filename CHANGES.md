@@ -9,3 +9,5 @@
   render API errors, and avoid logging submitted prompts or responses.
 - Pinned the Next/Babel/OpenAI tooling baseline and added `npm test`,
   `npm run check`, and `npm run audit` verification gates.
+- Added a zero-warning ESLint gate for TypeScript and TSX source and included
+  it in `npm test`.

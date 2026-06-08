@@ -19,8 +19,8 @@ The current focus is:
 Priority:
 
 - Preserve the docs onboarding flow shown in the README screenshot
-- Keep `npm run dev`, `npm run build`, `npm run type-check`, and `npm test`
-  meaningful
+- Keep `npm run dev`, `npm run lint`, `npm run build`, `npm run type-check`,
+  and `npm test` meaningful
 - Avoid committing API keys or proxy secrets
 - Keep editor and navigation components reviewable
 

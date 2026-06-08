@@ -31,7 +31,7 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Node.js 20.9 or newer and npm
+- Node.js 20.19 or newer and npm
 
 ### Setup
 
@@ -57,8 +57,9 @@ Detected npm scripts:
 - `npm run build` - `node node_modules/next/dist/bin/next build`
 - `npm run check` - `scripts/check-baseline.sh`
 - `npm run dev` - `node node_modules/next/dist/bin/next dev`
+- `npm run lint` - `eslint components pages scripts --ext ts,tsx --max-warnings=0`
 - `npm run start` - `node node_modules/next/dist/bin/next start`
-- `npm run test` - `npm run type-check && npm run test:parser && npm run build && npm run check && npm run audit`
+- `npm run test` - `npm run lint && npm run type-check && npm run test:parser && npm run build && npm run check && npm run audit`
 - `npm run test:parser` - `node node_modules/tsx/dist/cli.mjs scripts/test-execute-parser.ts`
 - `npm run type-check` - `node node_modules/typescript/bin/tsc --noEmit`
 
@@ -70,8 +71,9 @@ Run the local verification gate before changing the editor or execute API:
 npm test
 ```
 
-`npm test` runs TypeScript checks, focused execute parser/validator regression
-tests, the Next build, the source baseline guard, and
+`npm test` runs the zero-warning TypeScript/TSX lint gate, TypeScript checks,
+focused execute parser/validator regression tests, the Next build, the source
+baseline guard, and
 `npm audit --audit-level=high`. The execute API requires `OPENAI_API_KEY` at
 runtime and validates submitted examples before calling the OpenAI SDK.
 
@@ -98,6 +100,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-docs-execute-api-baseline.md` for the current
   execute API hardening baseline.
+- See `docs/plans/2026-06-08-docs-lint-gate.md` for the TypeScript lint gate.
 
 ## Contributing
 

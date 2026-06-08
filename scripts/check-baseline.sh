@@ -7,6 +7,7 @@ API="$ROOT_DIR/pages/api/execute/code.ts"
 EDITOR="$ROOT_DIR/components/Editor.tsx"
 README="$ROOT_DIR/README.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
+LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
 
 require_file() {
   path=$1
@@ -18,11 +19,13 @@ require_file() {
 
 for path in \
   "README.md" \
+  "eslint.config.mjs" \
   "package.json" \
   "package-lock.json" \
   "pages/api/execute/code.ts" \
   "components/Editor.tsx" \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
+  "docs/plans/2026-06-08-docs-lint-gate.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -39,17 +42,26 @@ for (const script of ["check", "audit", "test", "test:parser", "type-check"]) {
     throw new Error(`package.json must define ${script}`);
   }
 }
+if (!pkg.scripts.lint || pkg.scripts.lint !== "eslint components pages scripts --ext ts,tsx --max-warnings=0") {
+  throw new Error("package.json must define the zero-warning lint gate");
+}
+if (!pkg.scripts.test.includes("npm run lint")) {
+  throw new Error("npm test must include the lint gate");
+}
 if (!pkg.scripts.test.includes("npm run test:parser")) {
   throw new Error("npm test must include the execute parser test gate");
 }
 if (!pkg.scripts.test.includes("npm run build")) {
   throw new Error("npm test must include the Next build gate");
 }
-if (!pkg.engines || !pkg.engines.node) {
-  throw new Error("package.json must declare the supported Node engine");
+if (!pkg.engines || pkg.engines.node !== ">=20.19.0") {
+  throw new Error("package.json must declare the supported Node 20.19+ engine");
 }
 if (!pkg.overrides || pkg.overrides.postcss !== "8.5.10") {
   throw new Error("package.json must override postcss to the patched baseline");
+}
+if (!pkg.devDependencies || !pkg.devDependencies.eslint || !pkg.devDependencies["typescript-eslint"]) {
+  throw new Error("package.json must include ESLint dependencies");
 }
 NODE
 
@@ -93,6 +105,11 @@ fi
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$LINT_PLAN"; then
+  printf '%s\n' "Lint plan must be marked completed." >&2
   exit 1
 fi
 

@@ -5,14 +5,15 @@
     "dev": "node node_modules/next/dist/bin/next dev",
     "build": "node node_modules/next/dist/bin/next build",
     "start": "node node_modules/next/dist/bin/next start",
+    "lint": "eslint components pages scripts --ext ts,tsx --max-warnings=0",
     "type-check": "node node_modules/typescript/bin/tsc --noEmit",
     "test:parser": "node node_modules/tsx/dist/cli.mjs scripts/test-execute-parser.ts",
     "audit": "npm audit --audit-level=high",
     "check": "scripts/check-baseline.sh",
-    "test": "npm run type-check && npm run test:parser && npm run build && npm run check && npm run audit"
+    "test": "npm run lint && npm run type-check && npm run test:parser && npm run build && npm run check && npm run audit"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.19.0"
   },
   "dependencies": {
     "@babel/parser": "7.29.7",
@@ -39,12 +40,15 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/babel__traverse": "7.28.0",
     "@types/node": "20.19.42",
     "@types/react": "18.3.27",
     "@types/react-dom": "18.3.7",
+    "eslint": "10.4.1",
     "tsx": "4.22.4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.61.0"
   },
   "overrides": {
     "postcss": "8.5.10"
