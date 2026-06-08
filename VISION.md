@@ -48,3 +48,6 @@ sensitive request content.
 - Open proxy behavior without validation
 - UI redesigns that break the documented onboarding flow
 - Dependency updates that skip build and type-check verification
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
