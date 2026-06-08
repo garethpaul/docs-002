@@ -1,5 +1,8 @@
 ## Docs 002 Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+
 Docs 002 is a Next.js "Try Now Docs" prototype. It provides a documentation
 experience that can proxy API requests and speed up onboarding through an
 embedded editor.
