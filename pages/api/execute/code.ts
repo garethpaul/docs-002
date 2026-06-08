@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
+import { timingSafeEqual } from "crypto";
 import type {
   ArrayExpression,
   Expression,
@@ -53,6 +54,29 @@ export const config = {
     },
   },
 };
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function bearerToken(req: NextApiRequest) {
+  const authorization = req.headers.authorization;
+  if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) {
+    return null;
+  }
+
+  return authorization.slice("Bearer ".length).trim();
+}
+
+function isAuthorized(req: NextApiRequest) {
+  const expectedToken = process.env.EXECUTE_API_TOKEN;
+  const providedToken = bearerToken(req);
+
+  return Boolean(expectedToken && providedToken && safeEqual(providedToken, expectedToken));
+}
 
 function isNamedMember(expression: unknown, propertyName: string): expression is MemberExpression {
   const member = expression as MemberExpression;
@@ -361,6 +385,17 @@ export default async function handler(
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!process.env.EXECUTE_API_TOKEN) {
+    return res.status(403).json({
+      error: "Execute API is disabled until EXECUTE_API_TOKEN is configured",
+    });
+  }
+
+  if (!isAuthorized(req)) {
+    res.setHeader("WWW-Authenticate", 'Bearer realm="execute-api"');
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   if (typeof req.body?.code !== "string") {
