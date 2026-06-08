@@ -27,6 +27,7 @@ for path in \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
   "scripts/test-execute-parser.ts" \
+  "scripts/check-execute-api-auth.sh" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
 done
@@ -83,6 +84,7 @@ for required in \
   "extractParameters" \
   "normalizeChatRequest" \
   "OPENAI_API_KEY" \
+  "EXECUTE_API_TOKEN" \
   "OPENAI_ALLOWED_MODELS" \
   "ALLOWED_MESSAGE_ROLES" \
   "ALLOWED_PARAMETER_NAMES" \
@@ -114,12 +116,14 @@ if ! grep -Fq "status: completed" "$LINT_PLAN"; then
 fi
 
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
+  ! grep -Fq "EXECUTE_API_TOKEN" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
   ! grep -Fq "npm test" "$README"; then
-  printf '%s\n' "README must document OPENAI_API_KEY, OPENAI_ALLOWED_MODELS, and npm test." >&2
+  printf '%s\n' "README must document OPENAI_API_KEY, EXECUTE_API_TOKEN, OPENAI_ALLOWED_MODELS, and npm test." >&2
   exit 1
 fi
 
+"$ROOT_DIR/scripts/check-execute-api-auth.sh"
 npm --prefix "$ROOT_DIR" run test:parser
 
 printf '%s\n' "docs-002 execute API baseline checks passed."

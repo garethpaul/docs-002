@@ -84,6 +84,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Detected references to OpenAI. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
 - `OPENAI_API_KEY` must be provided through the environment. Do not commit
   OpenAI keys or sample outputs containing private prompt data.
+- `EXECUTE_API_TOKEN` must be set to a server-only bearer token before the
+  `/api/execute/code` route will run. Callers must send it as
+  `Authorization: Bearer <token>`; do not expose it through `NEXT_PUBLIC_*`
+  variables or checked-in files.
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   When unset, the execute API only accepts the checked-in default allow-list.
 
