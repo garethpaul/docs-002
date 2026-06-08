@@ -54,13 +54,13 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 Detected npm scripts:
 
 - `npm run audit` - `npm audit --audit-level=high`
-- `npm run build` - `next build`
+- `npm run build` - `node node_modules/next/dist/bin/next build`
 - `npm run check` - `scripts/check-baseline.sh`
-- `npm run dev` - `next dev`
-- `npm run start` - `next start`
+- `npm run dev` - `node node_modules/next/dist/bin/next dev`
+- `npm run start` - `node node_modules/next/dist/bin/next start`
 - `npm run test` - `npm run type-check && npm run test:parser && npm run build && npm run check && npm run audit`
-- `npm run test:parser` - `tsx scripts/test-execute-parser.ts`
-- `npm run type-check` - `tsc --noEmit`
+- `npm run test:parser` - `node node_modules/tsx/dist/cli.mjs scripts/test-execute-parser.ts`
+- `npm run type-check` - `node node_modules/typescript/bin/tsc --noEmit`
 
 ## Testing and Verification
 
