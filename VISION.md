@@ -36,6 +36,11 @@ Contribution rules:
 
 ## Security
 
+Canonical security policy and reporting:
+
+- [`SECURITY.md`](SECURITY.md)
+
+
 API proxying can expose credentials and user prompts. Do not commit OpenAI keys,
 session secrets, or upstream API tokens.
 
