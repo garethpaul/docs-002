@@ -15,6 +15,7 @@ type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
 type JsonObject = { [key: string]: JsonValue };
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 type HeaderValue = string | string[] | undefined;
+type ExecuteBody = { code: string };
 type ChatCompletionParams = {
   model: string;
   messages: ChatMessage[];
@@ -34,6 +35,7 @@ const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
+const ALLOWED_BODY_FIELDS = new Set(["code"]);
 const ALLOWED_MESSAGE_FIELDS = new Set(["role", "content"]);
 const ALLOWED_PARAMETER_NAMES = new Set([
   "model",
@@ -222,6 +224,23 @@ export function hasJsonContentType(contentType: HeaderValue): boolean {
   );
 }
 
+export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return null;
+  }
+
+  const payload = body as Record<string, unknown>;
+  if (Object.keys(payload).some((name) => !ALLOWED_BODY_FIELDS.has(name))) {
+    return null;
+  }
+
+  if (typeof payload.code !== "string") {
+    return null;
+  }
+
+  return { code: payload.code };
+}
+
 function numberInRange(
   value: JsonValue | undefined,
   min: number,
@@ -389,15 +408,16 @@ export default async function handler(
     return res.status(415).json({ error: "Request content type must be application/json" });
   }
 
-  if (typeof req.body?.code !== "string") {
-    return res.status(400).json({ error: "Request body must include a code string" });
+  const body = normalizeExecuteBody(req.body);
+  if (!body) {
+    return res.status(400).json({ error: "Request body must include only a code string" });
   }
 
-  if (req.body.code.length > MAX_CODE_LENGTH) {
+  if (body.code.length > MAX_CODE_LENGTH) {
     return res.status(413).json({ error: "Code sample is too large" });
   }
 
-  const params = normalizeChatRequest(extractParameters(req.body.code));
+  const params = normalizeChatRequest(extractParameters(body.code));
   if (!params) {
     return res.status(400).json({
       error: "Code must contain a literal, allowed openai.chat.completions.create request",

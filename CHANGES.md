@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Restricted execute API request bodies to the `code` field before parsing
+  submitted examples.
 - Restricted execute API chat message objects to `role` and `content` fields.
 - Required JSON content types on execute API requests before validating or
   proxying submitted code.

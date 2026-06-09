@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   extractParameters,
   hasJsonContentType,
+  normalizeExecuteBody,
   normalizeChatRequest,
 } from "../pages/api/execute/code";
 
@@ -47,6 +48,13 @@ assert.equal(hasJsonContentType("Application/JSON; charset=utf-8"), true);
 assert.equal(hasJsonContentType(["text/plain", "application/json"]), true);
 assert.equal(hasJsonContentType("text/plain"), false);
 assert.equal(hasJsonContentType(undefined), false);
+
+assert.deepEqual(normalizeExecuteBody({ code: "const value = 1;" }), {
+  code: "const value = 1;",
+});
+assert.equal(normalizeExecuteBody({ code: "const value = 1;", apiKey: "secret" }), null);
+assert.equal(normalizeExecuteBody(["const value = 1;"]), null);
+assert.equal(normalizeExecuteBody({ code: 123 }), null);
 
 assert.equal(
   parseAndNormalize(`

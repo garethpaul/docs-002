@@ -12,6 +12,7 @@ CHECK_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-check-wrapper.md"
 MODEL_PLAN="$ROOT_DIR/docs/plans/2026-06-09-model-allowlist-narrowing.md"
 CONTENT_TYPE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-json-content-type-guard.md"
 MESSAGE_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-message-field-allowlist.md"
+BODY_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-execute-body-field-allowlist.md"
 
 require_file() {
   path=$1
@@ -33,6 +34,7 @@ for path in \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
   "docs/plans/2026-06-09-json-content-type-guard.md" \
+  "docs/plans/2026-06-09-execute-body-field-allowlist.md" \
   "docs/plans/2026-06-09-message-field-allowlist.md" \
   "docs/plans/2026-06-09-model-allowlist-narrowing.md" \
   "scripts/test-execute-parser.ts" \
@@ -94,6 +96,7 @@ for required in \
   "normalizeChatRequest" \
   "OPENAI_API_KEY" \
   "OPENAI_ALLOWED_MODELS" \
+  "ALLOWED_BODY_FIELDS" \
   "ALLOWED_MESSAGE_ROLES" \
   "ALLOWED_MESSAGE_FIELDS" \
   "ALLOWED_PARAMETER_NAMES" \
@@ -114,6 +117,12 @@ if ! grep -Fq "Request content type must be application/json" "$API"; then
   exit 1
 fi
 
+if ! grep -Fq "normalizeExecuteBody" "$API" ||
+  ! grep -Fq "Request body must include only a code string" "$API"; then
+  printf '%s\n' "execute API must validate request body fields before parsing code." >&2
+  exit 1
+fi
+
 if ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"gpt-4o-mini\"" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
   ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"not-allowed\"" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
   printf '%s\n' "Execute parser tests must cover model allow-list narrowing." >&2
@@ -123,6 +132,11 @@ fi
 if ! grep -Fq "hasJsonContentType(\"Application/JSON; charset=utf-8\")" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
   ! grep -Fq "hasJsonContentType(\"text/plain\")" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
   printf '%s\n' "Execute parser tests must cover JSON content-type enforcement." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'apiKey: "secret"' "$ROOT_DIR/scripts/test-execute-parser.ts"; then
+  printf '%s\n' "Execute parser tests must reject extra execute request body fields." >&2
   exit 1
 fi
 
@@ -171,6 +185,16 @@ if ! grep -Fq "status: completed" "$MESSAGE_FIELD_PLAN"; then
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$BODY_FIELD_PLAN"; then
+  printf '%s\n' "Execute body field allow-list plan must be marked completed." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$BODY_FIELD_PLAN"; then
+  printf '%s\n' "Execute body field allow-list plan must record make check verification." >&2
+  exit 1
+fi
+
 if ! grep -Fq "make check" "$MESSAGE_FIELD_PLAN"; then
   printf '%s\n' "Message field allow-list plan must record make check verification." >&2
   exit 1
@@ -193,6 +217,12 @@ fi
 if ! grep -Fq "Chat message objects may only" "$README" ||
   ! grep -Fq "message field allow-list" "$README"; then
   printf '%s\n' "README must document the message field allow-list." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Request bodies may only contain" "$README" ||
+  ! grep -Fq "execute body field allow-list" "$README"; then
+  printf '%s\n' "README must document the execute body field allow-list." >&2
   exit 1
 fi
 
