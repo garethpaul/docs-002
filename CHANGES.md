@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- Added a root `make check` wrapper for the existing npm verification gate.
 - Hardened the execute API proxy with AST-only extraction, literal parameter
   validation, model allow-listing, bounded message content, runtime key checks,
   and generic provider failure responses.

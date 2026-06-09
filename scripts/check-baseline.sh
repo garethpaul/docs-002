@@ -8,6 +8,7 @@ EDITOR="$ROOT_DIR/components/Editor.tsx"
 README="$ROOT_DIR/README.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
 LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
+CHECK_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-check-wrapper.md"
 
 require_file() {
   path=$1
@@ -19,11 +20,13 @@ require_file() {
 
 for path in \
   "README.md" \
+  "Makefile" \
   "eslint.config.mjs" \
   "package.json" \
   "package-lock.json" \
   "pages/api/execute/code.ts" \
   "components/Editor.tsx" \
+  "docs/plans/2026-06-08-docs-check-wrapper.md" \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
   "scripts/test-execute-parser.ts" \
@@ -113,10 +116,21 @@ if ! grep -Fq "status: completed" "$LINT_PLAN"; then
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$CHECK_PLAN"; then
+  printf '%s\n' "Check wrapper plan must be marked completed." >&2
+  exit 1
+fi
+
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
-  ! grep -Fq "npm test" "$README"; then
-  printf '%s\n' "README must document OPENAI_API_KEY, OPENAI_ALLOWED_MODELS, and npm test." >&2
+  ! grep -Fq "npm test" "$README" ||
+  ! grep -Fq "make check" "$README"; then
+  printf '%s\n' "README must document OPENAI_API_KEY, OPENAI_ALLOWED_MODELS, npm test, and make check." >&2
+  exit 1
+fi
+
+if ! grep -Fq "check: verify" "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile must expose make check as the repository verification wrapper." >&2
   exit 1
 fi
 
