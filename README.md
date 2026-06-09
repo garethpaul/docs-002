@@ -99,6 +99,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   own fields so the allow-lists reject them.
 - Numeric execute parameters must be finite numbers within their checked range;
   non-finite values are rejected before proxying.
+- Execute normalization requires own request, parameter, and message fields
+  before reading `code`, `model`, `messages`, `role`, or `content`.
 
 ## Security and Privacy Notes
 
@@ -125,6 +127,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   rejection in extracted execute API objects.
 - See `docs/plans/2026-06-09-finite-numeric-parameter-validation.md` for
   finite numeric execute parameters.
+- See `docs/plans/2026-06-09-own-field-validation.md` for own request,
+  parameter, and message field validation.
 
 ## Contributing
 

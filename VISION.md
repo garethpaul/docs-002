@@ -31,6 +31,8 @@ Current baseline:
 - Execute API request bodies may only contain the submitted `code` string.
 - Chat messages may only include `role` and `content` so metadata is not
   accepted and then silently dropped.
+- Execute request, parameter, and message normalization requires own fields
+  before reading accepted values.
 - Extracted literal objects preserve prototype keys as own fields before
   allow-list validation.
 - Numeric execute parameters must be finite values before range checks pass.

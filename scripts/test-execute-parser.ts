@@ -55,6 +55,7 @@ assert.deepEqual(normalizeExecuteBody({ code: "const value = 1;" }), {
 assert.equal(normalizeExecuteBody({ code: "const value = 1;", apiKey: "secret" }), null);
 assert.equal(normalizeExecuteBody(["const value = 1;"]), null);
 assert.equal(normalizeExecuteBody({ code: 123 }), null);
+assert.equal(normalizeExecuteBody(Object.create({ code: "const inherited = true;" })), null);
 
 assert.equal(
   parseAndNormalize(`
@@ -63,6 +64,24 @@ assert.equal(
       messages: [{ role: "user", content: "Hello" }]
     });
   `),
+  null,
+);
+
+assert.equal(
+  normalizeChatRequest(Object.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Inherited params" }],
+  })),
+  null,
+);
+
+const inheritedMessage = Object.create({ role: "user", content: "Inherited message" });
+assert.equal(
+  normalizeChatRequest({
+    model: "gpt-4o-mini",
+    messages: [inheritedMessage],
+    max_tokens: 128,
+  } as any),
   null,
 );
 

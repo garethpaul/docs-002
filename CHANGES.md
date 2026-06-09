@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Required own execute request, parameter, and message fields before normalized
+  values are read.
 - Rejected non-finite numeric execute parameters before proxying OpenAI chat
   completion requests.
 - Preserved extracted prototype keys as own fields so execute API parameter and

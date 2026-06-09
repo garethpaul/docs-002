@@ -15,6 +15,7 @@ MESSAGE_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-message-field-allowlist.md"
 BODY_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-execute-body-field-allowlist.md"
 PROTOTYPE_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-prototype-key-rejection.md"
 FINITE_NUMERIC_PLAN="$ROOT_DIR/docs/plans/2026-06-09-finite-numeric-parameter-validation.md"
+OWN_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-own-field-validation.md"
 
 require_file() {
   path=$1
@@ -41,6 +42,7 @@ for path in \
   "docs/plans/2026-06-09-model-allowlist-narrowing.md" \
   "docs/plans/2026-06-09-prototype-key-rejection.md" \
   "docs/plans/2026-06-09-finite-numeric-parameter-validation.md" \
+  "docs/plans/2026-06-09-own-field-validation.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -126,6 +128,16 @@ if ! grep -Fq "Object.create(null) as JsonObject" "$API"; then
   exit 1
 fi
 
+if ! grep -Fq "function hasOwnJsonField" "$API" ||
+  ! grep -Fq 'hasOwnJsonField(payload, "code")' "$API" ||
+  ! grep -Fq 'hasOwnJsonField(params, "model")' "$API" ||
+  ! grep -Fq 'hasOwnJsonField(params, "messages")' "$API" ||
+  ! grep -Fq 'hasOwnJsonField(message, "role")' "$API" ||
+  ! grep -Fq 'hasOwnJsonField(message, "content")' "$API"; then
+  printf '%s\n' "execute API must require own fields before reading normalized request data." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Request content type must be application/json" "$API"; then
   printf '%s\n' "execute API must reject non-JSON request content types." >&2
   exit 1
@@ -151,6 +163,13 @@ fi
 
 if ! grep -Fq 'apiKey: "secret"' "$ROOT_DIR/scripts/test-execute-parser.ts"; then
   printf '%s\n' "Execute parser tests must reject extra execute request body fields." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Object.create({ code:" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
+  ! grep -Fq "Inherited params" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
+  ! grep -Fq "Inherited message" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
+  printf '%s\n' "Execute parser tests must reject inherited request, parameter, and message fields." >&2
   exit 1
 fi
 
@@ -244,6 +263,16 @@ if ! grep -Fq "make check" "$FINITE_NUMERIC_PLAN"; then
   exit 1
 fi
 
+if ! grep -Fq "Status: Completed" "$OWN_FIELD_PLAN"; then
+  printf '%s\n' "Own field validation plan must be marked completed." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$OWN_FIELD_PLAN"; then
+  printf '%s\n' "Own field validation plan must record make check verification." >&2
+  exit 1
+fi
+
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
   ! grep -Fq "Content-Type: application/json" "$README" ||
@@ -277,6 +306,11 @@ fi
 
 if ! grep -Fq "finite numeric execute parameters" "$README"; then
   printf '%s\n' "README must document finite numeric execute parameter validation." >&2
+  exit 1
+fi
+
+if ! grep -Fq "own request, parameter, and message fields" "$README"; then
+  printf '%s\n' "README must document own field validation." >&2
   exit 1
 fi
 

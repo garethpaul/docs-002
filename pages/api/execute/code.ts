@@ -99,6 +99,10 @@ function propertyName(property: ObjectProperty) {
   return null;
 }
 
+function hasOwnJsonField(value: object, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, field);
+}
+
 function literalValue(expression: Expression): JsonValue | undefined {
   switch (expression.type) {
     case "StringLiteral":
@@ -234,7 +238,7 @@ export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
     return null;
   }
 
-  if (typeof payload.code !== "string") {
+  if (!hasOwnJsonField(payload, "code") || typeof payload.code !== "string") {
     return null;
   }
 
@@ -270,6 +274,10 @@ function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
     }
 
     if (Object.keys(message).some((name) => !ALLOWED_MESSAGE_FIELDS.has(name))) {
+      return null;
+    }
+
+    if (!hasOwnJsonField(message, "role") || !hasOwnJsonField(message, "content")) {
       return null;
     }
 
@@ -338,6 +346,9 @@ export function normalizeChatRequest(params: JsonObject | null): ChatCompletionP
   if (!params || Object.keys(params).some((name) => !ALLOWED_PARAMETER_NAMES.has(name))) {
     return null;
   }
+  if (!hasOwnJsonField(params, "model") || !hasOwnJsonField(params, "messages")) {
+    return null;
+  }
 
   const model = params.model;
   if (typeof model !== "string" || model.trim() === "" || !allowedModels().has(model)) {
@@ -350,7 +361,7 @@ export function normalizeChatRequest(params: JsonObject | null): ChatCompletionP
   }
 
   const maxTokens =
-    params.max_tokens === undefined
+    !hasOwnJsonField(params, "max_tokens")
       ? DEFAULT_COMPLETION_TOKENS
       : numberInRange(params.max_tokens, 1, MAX_COMPLETION_TOKENS, true);
   const normalized: ChatCompletionParams = { model, messages, max_tokens: maxTokens ?? 0 };
@@ -366,7 +377,7 @@ export function normalizeChatRequest(params: JsonObject | null): ChatCompletionP
   ] as const;
 
   for (const [name, min, max] of numericOptions) {
-    if (params[name] === undefined) {
+    if (!hasOwnJsonField(params, name)) {
       continue;
     }
     const value = numberInRange(params[name], min, max);
@@ -376,7 +387,7 @@ export function normalizeChatRequest(params: JsonObject | null): ChatCompletionP
     normalized[name] = value;
   }
 
-  const stop = normalizeStop(params.stop);
+  const stop = hasOwnJsonField(params, "stop") ? normalizeStop(params.stop) : undefined;
   if (stop === null) {
     return null;
   }
@@ -384,7 +395,9 @@ export function normalizeChatRequest(params: JsonObject | null): ChatCompletionP
     normalized.stop = stop;
   }
 
-  const responseFormat = normalizeResponseFormat(params.response_format);
+  const responseFormat = hasOwnJsonField(params, "response_format")
+    ? normalizeResponseFormat(params.response_format)
+    : undefined;
   if (responseFormat === null) {
     return null;
   }
