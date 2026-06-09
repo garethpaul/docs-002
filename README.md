@@ -95,6 +95,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   metadata fields are rejected instead of silently dropped.
 - Execute API request bodies are limited to the `code` field; extra fields such
   as credentials or metadata are rejected before code parsing.
+- Extracted parameter and message objects preserve prototype-pollution keys as
+  own fields so the allow-lists reject them.
 
 ## Security and Privacy Notes
 
@@ -117,6 +119,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-message-field-allowlist.md` for the execute API
   message field allow-list.
 - See `docs/plans/2026-06-09-execute-body-field-allowlist.md` for the execute body field allow-list.
+- See `docs/plans/2026-06-09-prototype-key-rejection.md` for prototype key
+  rejection in extracted execute API objects.
 
 ## Contributing
 

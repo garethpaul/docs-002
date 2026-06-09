@@ -140,7 +140,7 @@ function arrayValue(expression: ArrayExpression): JsonValue[] | undefined {
 }
 
 function objectValue(expression: ObjectExpression): JsonObject | undefined {
-  const value: JsonObject = {};
+  const value = Object.create(null) as JsonObject;
 
   for (const property of expression.properties) {
     if (property.type !== "ObjectProperty") {

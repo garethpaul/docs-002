@@ -31,6 +31,8 @@ Current baseline:
 - Execute API request bodies may only contain the submitted `code` string.
 - Chat messages may only include `role` and `content` so metadata is not
   accepted and then silently dropped.
+- Extracted literal objects preserve prototype keys as own fields before
+  allow-list validation.
 - Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
   when maintainers need a narrower model allow-list. Environment configuration
   cannot expand beyond the checked-in default model set.

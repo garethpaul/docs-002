@@ -80,6 +80,27 @@ assert.equal(
   parseAndNormalize(`
     await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      "__proto__": { polluted: true },
+      messages: [{ role: "user", content: "Hello" }]
+    });
+  `),
+  null,
+);
+
+assert.equal(
+  parseAndNormalize(`
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Hello", "__proto__": { polluted: true } }]
+    });
+  `),
+  null,
+);
+
+assert.equal(
+  parseAndNormalize(`
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: "Hello", name: "sample-user" }]
     });
   `),
