@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Rejected non-finite numeric execute parameters before proxying OpenAI chat
+  completion requests.
 - Preserved extracted prototype keys as own fields so execute API parameter and
   message allow-lists reject them.
 - Restricted execute API request bodies to the `code` field before parsing

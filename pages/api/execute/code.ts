@@ -247,7 +247,7 @@ function numberInRange(
   max: number,
   integer = false,
 ) {
-  if (typeof value !== "number" || value < min || value > max) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
     return null;
   }
   if (integer && !Number.isInteger(value)) {

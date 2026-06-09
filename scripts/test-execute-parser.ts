@@ -218,4 +218,15 @@ assert.equal(
   null,
 );
 
+assert.equal(
+  parseAndNormalize(`
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Hello" }],
+      temperature: 1e309
+    });
+  `),
+  null,
+);
+
 console.log("execute parser tests passed.");
