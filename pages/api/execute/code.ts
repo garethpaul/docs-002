@@ -14,6 +14,7 @@ import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/ch
 type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
 type JsonObject = { [key: string]: JsonValue };
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+type HeaderValue = string | string[] | undefined;
 type ChatCompletionParams = {
   model: string;
   messages: ChatMessage[];
@@ -209,6 +210,17 @@ function allowedModels() {
   return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)));
 }
 
+export function hasJsonContentType(contentType: HeaderValue): boolean {
+  if (Array.isArray(contentType)) {
+    return contentType.some(hasJsonContentType);
+  }
+
+  return (
+    typeof contentType === "string" &&
+    contentType.split(";")[0].trim().toLowerCase() === "application/json"
+  );
+}
+
 function numberInRange(
   value: JsonValue | undefined,
   min: number,
@@ -366,6 +378,10 @@ export default async function handler(
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!hasJsonContentType(req.headers["content-type"])) {
+    return res.status(415).json({ error: "Request content type must be application/json" });
   }
 
   if (typeof req.body?.code !== "string") {

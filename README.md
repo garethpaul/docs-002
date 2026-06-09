@@ -77,7 +77,8 @@ npm test
 TypeScript/TSX lint gate, TypeScript checks, focused execute parser/validator
 regression tests, the Next build, the source baseline guard, and
 `npm audit --audit-level=high`. The execute API requires `OPENAI_API_KEY` at
-runtime and validates submitted examples before calling the OpenAI SDK.
+runtime, accepts `Content-Type: application/json` requests only, and validates
+submitted examples before calling the OpenAI SDK.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -107,6 +108,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-08-docs-lint-gate.md` for the TypeScript lint gate.
 - See `docs/plans/2026-06-09-model-allowlist-narrowing.md` for model
   allow-list narrowing semantics.
+- See `docs/plans/2026-06-09-json-content-type-guard.md` for the execute API
+  JSON request boundary.
 
 ## Contributing
 

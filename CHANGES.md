@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Required JSON content types on execute API requests before validating or
+  proxying submitted code.
 - Constrained `OPENAI_ALLOWED_MODELS` so deployment configuration can only
   narrow the checked-in execute API model allow-list.
 

@@ -10,6 +10,7 @@ PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
 LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
 CHECK_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-check-wrapper.md"
 MODEL_PLAN="$ROOT_DIR/docs/plans/2026-06-09-model-allowlist-narrowing.md"
+CONTENT_TYPE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-json-content-type-guard.md"
 
 require_file() {
   path=$1
@@ -30,6 +31,7 @@ for path in \
   "docs/plans/2026-06-08-docs-check-wrapper.md" \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
+  "docs/plans/2026-06-09-json-content-type-guard.md" \
   "docs/plans/2026-06-09-model-allowlist-narrowing.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
@@ -86,6 +88,7 @@ for required in \
   "MAX_MESSAGE_CONTENT_LENGTH" \
   "MAX_COMPLETION_TOKENS" \
   "extractParameters" \
+  "hasJsonContentType" \
   "normalizeChatRequest" \
   "OPENAI_API_KEY" \
   "OPENAI_ALLOWED_MODELS" \
@@ -103,9 +106,20 @@ if ! grep -Fq "defaultAllowedModels.has(model)" "$API"; then
   exit 1
 fi
 
+if ! grep -Fq "Request content type must be application/json" "$API"; then
+  printf '%s\n' "execute API must reject non-JSON request content types." >&2
+  exit 1
+fi
+
 if ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"gpt-4o-mini\"" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
   ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"not-allowed\"" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
   printf '%s\n' "Execute parser tests must cover model allow-list narrowing." >&2
+  exit 1
+fi
+
+if ! grep -Fq "hasJsonContentType(\"Application/JSON; charset=utf-8\")" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
+  ! grep -Fq "hasJsonContentType(\"text/plain\")" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
+  printf '%s\n' "Execute parser tests must cover JSON content-type enforcement." >&2
   exit 1
 fi
 
@@ -139,11 +153,17 @@ if ! grep -Fq "status: completed" "$MODEL_PLAN"; then
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$CONTENT_TYPE_PLAN"; then
+  printf '%s\n' "JSON content-type guard plan must be marked completed." >&2
+  exit 1
+fi
+
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
+  ! grep -Fq "Content-Type: application/json" "$README" ||
   ! grep -Fq "npm test" "$README" ||
   ! grep -Fq "make check" "$README"; then
-  printf '%s\n' "README must document OPENAI_API_KEY, OPENAI_ALLOWED_MODELS, npm test, and make check." >&2
+  printf '%s\n' "README must document API key, model allow-list, JSON content type, npm test, and make check." >&2
   exit 1
 fi
 
