@@ -197,11 +197,16 @@ export function extractParameters(code: string): JsonObject | null {
 }
 
 function allowedModels() {
+  const defaultAllowedModels = new Set(DEFAULT_ALLOWED_MODELS);
   const configuredModels = process.env.OPENAI_ALLOWED_MODELS?.split(",")
     .map((model) => model.trim())
     .filter(Boolean);
 
-  return new Set(configuredModels?.length ? configuredModels : DEFAULT_ALLOWED_MODELS);
+  if (!configuredModels?.length) {
+    return defaultAllowedModels;
+  }
+
+  return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)));
 }
 
 function numberInRange(

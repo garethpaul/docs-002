@@ -87,7 +87,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - `OPENAI_API_KEY` must be provided through the environment. Do not commit
   OpenAI keys or sample outputs containing private prompt data.
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
-  When unset, the execute API only accepts the checked-in default allow-list.
+  It can only narrow the checked-in default model allow-list; unsupported
+  values are not allowed to expand the proxy. When unset, the execute API only
+  accepts the checked-in defaults.
 
 ## Security and Privacy Notes
 
@@ -103,6 +105,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-08-docs-execute-api-baseline.md` for the current
   execute API hardening baseline.
 - See `docs/plans/2026-06-08-docs-lint-gate.md` for the TypeScript lint gate.
+- See `docs/plans/2026-06-09-model-allowlist-narrowing.md` for model
+  allow-list narrowing semantics.
 
 ## Contributing
 

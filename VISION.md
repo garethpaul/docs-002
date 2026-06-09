@@ -29,7 +29,8 @@ Current baseline:
 - The execute API accepts only static `openai.chat.completions.create({ ... })`
   examples with bounded literal parameters.
 - Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
-  when maintainers need a narrower model allow-list.
+  when maintainers need a narrower model allow-list. Environment configuration
+  cannot expand beyond the checked-in default model set.
 - The editor sends the current code string directly and avoids logging prompt
   content, parsed parameters, or provider responses.
 

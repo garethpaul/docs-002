@@ -9,6 +9,7 @@ README="$ROOT_DIR/README.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
 LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
 CHECK_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-check-wrapper.md"
+MODEL_PLAN="$ROOT_DIR/docs/plans/2026-06-09-model-allowlist-narrowing.md"
 
 require_file() {
   path=$1
@@ -29,6 +30,7 @@ for path in \
   "docs/plans/2026-06-08-docs-check-wrapper.md" \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
+  "docs/plans/2026-06-09-model-allowlist-narrowing.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -96,6 +98,17 @@ for required in \
   fi
 done
 
+if ! grep -Fq "defaultAllowedModels.has(model)" "$API"; then
+  printf '%s\n' "OPENAI_ALLOWED_MODELS must only narrow the default model allow-list." >&2
+  exit 1
+fi
+
+if ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"gpt-4o-mini\"" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
+  ! grep -Fq "process.env.OPENAI_ALLOWED_MODELS = \"not-allowed\"" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
+  printf '%s\n' "Execute parser tests must cover model allow-list narrowing." >&2
+  exit 1
+fi
+
 if grep -Fq "JSON.stringify(codeContent)" "$EDITOR"; then
   printf '%s\n' "Editor must send codeContent directly; do not double-encode it." >&2
   exit 1
@@ -121,11 +134,21 @@ if ! grep -Fq "status: completed" "$CHECK_PLAN"; then
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$MODEL_PLAN"; then
+  printf '%s\n' "Model allow-list narrowing plan must be marked completed." >&2
+  exit 1
+fi
+
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
   ! grep -Fq "npm test" "$README" ||
   ! grep -Fq "make check" "$README"; then
   printf '%s\n' "README must document OPENAI_API_KEY, OPENAI_ALLOWED_MODELS, npm test, and make check." >&2
+  exit 1
+fi
+
+if ! grep -Fq "can only narrow the checked-in default model allow-list" "$README"; then
+  printf '%s\n' "README must document model allow-list narrowing semantics." >&2
   exit 1
 fi
 

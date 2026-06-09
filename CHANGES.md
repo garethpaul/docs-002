@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-09
+
+- Constrained `OPENAI_ALLOWED_MODELS` so deployment configuration can only
+  narrow the checked-in execute API model allow-list.
+
 ## 2026-06-08
 
 - Added a root `make check` wrapper for the existing npm verification gate.
