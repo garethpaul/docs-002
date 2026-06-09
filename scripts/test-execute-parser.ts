@@ -72,6 +72,16 @@ assert.equal(
   parseAndNormalize(`
     await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Hello", name: "sample-user" }]
+    });
+  `),
+  null,
+);
+
+assert.equal(
+  parseAndNormalize(`
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: ${JSON.stringify("x".repeat(8001))} }]
     });
   `),

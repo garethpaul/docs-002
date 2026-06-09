@@ -34,6 +34,7 @@ const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
+const ALLOWED_MESSAGE_FIELDS = new Set(["role", "content"]);
 const ALLOWED_PARAMETER_NAMES = new Set([
   "model",
   "messages",
@@ -246,6 +247,10 @@ function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
 
   for (const message of value) {
     if (!message || typeof message !== "object" || Array.isArray(message)) {
+      return null;
+    }
+
+    if (Object.keys(message).some((name) => !ALLOWED_MESSAGE_FIELDS.has(name))) {
       return null;
     }
 

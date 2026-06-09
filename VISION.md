@@ -28,6 +28,8 @@ Current baseline:
 
 - The execute API accepts only static `openai.chat.completions.create({ ... })`
   examples with JSON request bodies and bounded literal parameters.
+- Chat messages may only include `role` and `content` so metadata is not
+  accepted and then silently dropped.
 - Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
   when maintainers need a narrower model allow-list. Environment configuration
   cannot expand beyond the checked-in default model set.

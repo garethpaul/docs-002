@@ -2,6 +2,7 @@
 
 ## 2026-06-09
 
+- Restricted execute API chat message objects to `role` and `content` fields.
 - Required JSON content types on execute API requests before validating or
   proxying submitted code.
 - Constrained `OPENAI_ALLOWED_MODELS` so deployment configuration can only

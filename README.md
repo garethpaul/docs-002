@@ -78,7 +78,8 @@ TypeScript/TSX lint gate, TypeScript checks, focused execute parser/validator
 regression tests, the Next build, the source baseline guard, and
 `npm audit --audit-level=high`. The execute API requires `OPENAI_API_KEY` at
 runtime, accepts `Content-Type: application/json` requests only, and validates
-submitted examples before calling the OpenAI SDK.
+submitted examples before calling the OpenAI SDK. Chat message objects may only
+contain `role` and `content`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -91,6 +92,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only
   accepts the checked-in defaults.
+- Submitted chat messages are normalized to `role` and `content` only; message
+  metadata fields are rejected instead of silently dropped.
 
 ## Security and Privacy Notes
 
@@ -110,6 +113,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   allow-list narrowing semantics.
 - See `docs/plans/2026-06-09-json-content-type-guard.md` for the execute API
   JSON request boundary.
+- See `docs/plans/2026-06-09-message-field-allowlist.md` for the execute API
+  message field allow-list.
 
 ## Contributing
 
