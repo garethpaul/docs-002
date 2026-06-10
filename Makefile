@@ -12,7 +12,7 @@ build:
 	$(NPM) run build
 
 audit:
-	$(NPM) audit --audit-level=high
+	$(NPM) audit --audit-level=moderate
 
 verify: test
 

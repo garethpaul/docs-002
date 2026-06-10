@@ -1,5 +1,16 @@
 # Changes
 
+## 2026-06-10
+
+- Added a GitHub Actions workflow that runs `npm ci` and `make check` on Node
+  20, 22, and 24.
+- Updated Next.js to 16.2.9, OpenAI to 6.42.0, React to 19.2.7, React types to
+  19.x, and the CodeMirror lint package to 6.9.7.
+- Pinned workflow actions, limited repository access to read-only, and raised
+  dependency auditing from high to moderate severity.
+- Extended the source baseline and docs to require the hosted CI verification
+  path.
+
 ## 2026-06-09
 
 - Required own execute request, parameter, and message fields before normalized

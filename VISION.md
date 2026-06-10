@@ -21,6 +21,7 @@ Priority:
 - Preserve the docs onboarding flow shown in the README screenshot
 - Keep `npm run dev`, `npm run lint`, `npm run build`, `npm run type-check`,
   and `npm test` meaningful
+- Keep GitHub Actions aligned with the local npm `make check` baseline
 - Avoid committing API keys or proxy secrets
 - Keep editor and navigation components reviewable
 
@@ -54,6 +55,8 @@ Contribution rules:
 - Run `npm test` before pushing code changes.
 - Keep secrets in environment configuration.
 - Update screenshots or README notes when the visible docs flow changes.
+- Keep `.github/workflows/check.yml` in sync with the local npm verification
+  gate.
 
 ## Security
 
