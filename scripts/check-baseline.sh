@@ -17,7 +17,9 @@ PROTOTYPE_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-prototype-key-rejection.md"
 FINITE_NUMERIC_PLAN="$ROOT_DIR/docs/plans/2026-06-09-finite-numeric-parameter-validation.md"
 OWN_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-own-field-validation.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
+EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+MAKEFILE="$ROOT_DIR/Makefile"
 
 require_file() {
   path=$1
@@ -47,6 +49,7 @@ for path in \
   "docs/plans/2026-06-09-finite-numeric-parameter-validation.md" \
   "docs/plans/2026-06-09-own-field-validation.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
+  "docs/plans/2026-06-10-execute-api-enable-gate.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -68,6 +71,17 @@ fi
 
 if ! grep -Fq "workflow_dispatch:" "$CI_WORKFLOW" || ! grep -Fq "timeout-minutes: 15" "$CI_WORKFLOW"; then
   printf '%s\n' "GitHub Actions workflow must support bounded manual verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "runs-on: ubuntu-24.04" "$CI_WORKFLOW"; then
+  printf '%s\n' "GitHub Actions must use the stable Ubuntu 24.04 runner." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$MAKEFILE" ||
+  [ "$(grep -c '\$(NPM) --prefix \$(ROOT)' "$MAKEFILE")" -ne 4 ]; then
+  printf '%s\n' "Make targets must run npm from the repository root." >&2
   exit 1
 fi
 
@@ -136,6 +150,7 @@ for required in \
   "MAX_COMPLETION_TOKENS" \
   "extractParameters" \
   "hasJsonContentType" \
+  "isExecuteApiEnabled" \
   "normalizeChatRequest" \
   "OPENAI_API_KEY" \
   "OPENAI_ALLOWED_MODELS" \
@@ -149,6 +164,12 @@ for required in \
     exit 1
   fi
 done
+
+if ! grep -Fq 'value.trim().toLowerCase() === "true"' "$API" ||
+  ! grep -Fq 'return res.status(503).json({ error: "Execute API is disabled" })' "$API"; then
+  printf '%s\n' "Execute API must stay disabled unless explicitly enabled." >&2
+  exit 1
+fi
 
 if ! grep -Fq "defaultAllowedModels.has(model)" "$API"; then
   printf '%s\n' "OPENAI_ALLOWED_MODELS must only narrow the default model allow-list." >&2
@@ -195,6 +216,12 @@ fi
 if ! grep -Fq "hasJsonContentType(\"Application/JSON; charset=utf-8\")" "$ROOT_DIR/scripts/test-execute-parser.ts" ||
   ! grep -Fq "hasJsonContentType(\"text/plain\")" "$ROOT_DIR/scripts/test-execute-parser.ts"; then
   printf '%s\n' "Execute parser tests must cover JSON content-type enforcement." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'isExecuteApiEnabled("1")' "$ROOT_DIR/scripts/test-execute-parser.ts" ||
+  ! grep -Fq 'isExecuteApiEnabled(" TRUE ")' "$ROOT_DIR/scripts/test-execute-parser.ts"; then
+  printf '%s\n' "Execute parser tests must cover explicit API enablement normalization." >&2
   exit 1
 fi
 
@@ -316,8 +343,15 @@ if ! grep -Fq "status: completed" "$CI_PLAN" ||
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$EXECUTE_ENABLE_PLAN" ||
+  ! grep -Fq "make check" "$EXECUTE_ENABLE_PLAN"; then
+  printf '%s\n' "Execute API enable gate plan must be completed and record verification." >&2
+  exit 1
+fi
+
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
+  ! grep -Fq "DOCS_EXECUTE_ENABLED" "$README" ||
   ! grep -Fq "Content-Type: application/json" "$README" ||
   ! grep -Fq "npm test" "$README" ||
   ! grep -Fq "make check" "$README" ||

@@ -2,6 +2,9 @@
 
 ## 2026-06-10
 
+- Added an explicit, default-off `DOCS_EXECUTE_ENABLED=true` deployment gate
+  before the spend-capable OpenAI proxy can run.
+- Rooted Make targets to the repository and pinned CI to Ubuntu 24.04.
 - Added a GitHub Actions workflow that runs `npm ci` and `make check` on Node
   20, 22, and 24.
 - Updated Next.js to 16.2.9, OpenAI to 6.42.0, React to 19.2.7, React types to

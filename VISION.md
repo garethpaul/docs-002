@@ -23,6 +23,8 @@ Priority:
   and `npm test` meaningful
 - Keep GitHub Actions aligned with the local npm `make check` baseline
 - Avoid committing API keys or proxy secrets
+- Keep the spend-capable execute route disabled unless deployment explicitly
+  enables it
 - Keep editor and navigation components reviewable
 
 Current baseline:
@@ -40,6 +42,8 @@ Current baseline:
 - Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
   when maintainers need a narrower model allow-list. Environment configuration
   cannot expand beyond the checked-in default model set.
+- `DOCS_EXECUTE_ENABLED=true` is required before any provider request can run;
+  public deployments still need upstream authentication and rate limiting.
 - The editor sends the current code string directly and avoids logging prompt
   content, parsed parameters, or provider responses.
 

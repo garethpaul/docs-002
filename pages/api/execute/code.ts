@@ -228,6 +228,10 @@ export function hasJsonContentType(contentType: HeaderValue): boolean {
   );
 }
 
+export function isExecuteApiEnabled(value = process.env.DOCS_EXECUTE_ENABLED): boolean {
+  return typeof value === "string" && value.trim().toLowerCase() === "true";
+}
+
 export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return null;
@@ -415,6 +419,10 @@ export default async function handler(
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!isExecuteApiEnabled()) {
+    return res.status(503).json({ error: "Execute API is disabled" });
   }
 
   if (!hasJsonContentType(req.headers["content-type"])) {

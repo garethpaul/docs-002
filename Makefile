@@ -1,18 +1,19 @@
 .PHONY: lint test build audit verify check
 
+ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 NPM ?= npm
 
 lint:
-	$(NPM) run lint
+	$(NPM) --prefix $(ROOT) run lint
 
 test:
-	$(NPM) test
+	$(NPM) --prefix $(ROOT) test
 
 build:
-	$(NPM) run build
+	$(NPM) --prefix $(ROOT) run build
 
 audit:
-	$(NPM) audit --audit-level=moderate
+	$(NPM) --prefix $(ROOT) audit --audit-level=moderate
 
 verify: test
 
