@@ -5,6 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PACKAGE_JSON="$ROOT_DIR/package.json"
 API="$ROOT_DIR/pages/api/execute/code.ts"
 EDITOR="$ROOT_DIR/components/Editor.tsx"
+PARSER_TEST="$ROOT_DIR/scripts/test-execute-parser.ts"
 README="$ROOT_DIR/README.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
 LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
@@ -18,6 +19,7 @@ FINITE_NUMERIC_PLAN="$ROOT_DIR/docs/plans/2026-06-09-finite-numeric-parameter-va
 OWN_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-own-field-validation.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
+REQUEST_TIMEOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-12-openai-request-timeout.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -50,6 +52,7 @@ for path in \
   "docs/plans/2026-06-09-own-field-validation.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-execute-api-enable-gate.md" \
+  "docs/plans/2026-06-12-openai-request-timeout.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -164,6 +167,14 @@ for required in \
     exit 1
   fi
 done
+
+if ! grep -Fq "OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 })" "$API" ||
+  ! grep -Fq "OPENAI_REQUEST_OPTIONS," "$API" ||
+  ! grep -Fq "assert.deepEqual(OPENAI_REQUEST_OPTIONS, { timeout: 30_000, maxRetries: 0 })" "$PARSER_TEST" ||
+  ! grep -Fq "Object.isFrozen(OPENAI_REQUEST_OPTIONS)" "$PARSER_TEST"; then
+  printf '%s\n' "OpenAI execute requests must keep the tested 30-second zero-retry boundary." >&2
+  exit 1
+fi
 
 if ! grep -Fq 'value.trim().toLowerCase() === "true"' "$API" ||
   ! grep -Fq 'return res.status(503).json({ error: "Execute API is disabled" })' "$API"; then
@@ -346,6 +357,12 @@ fi
 if ! grep -Fq "status: completed" "$EXECUTE_ENABLE_PLAN" ||
   ! grep -Fq "make check" "$EXECUTE_ENABLE_PLAN"; then
   printf '%s\n' "Execute API enable gate plan must be completed and record verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$REQUEST_TIMEOUT_PLAN" ||
+  ! grep -Fq "npm test" "$REQUEST_TIMEOUT_PLAN"; then
+  printf '%s\n' "OpenAI request timeout plan must remain completed and verified." >&2
   exit 1
 fi
 

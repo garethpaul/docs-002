@@ -112,6 +112,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   non-finite values are rejected before proxying.
 - Execute normalization requires own request, parameter, and message fields
   before reading `code`, `model`, `messages`, `role`, or `content`.
+- Enabled provider calls use a fixed 30-second timeout with SDK retries disabled
+  so one interactive request has a bounded OpenAI attempt.
 
 ## Security and Privacy Notes
 
@@ -143,7 +145,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-10-ci-baseline.md` for the hosted GitHub Actions
   baseline.
 - See `docs/plans/2026-06-10-execute-api-enable-gate.md` for the explicit
-  execute-route deployment interlock.
+  execute route deployment interlock.
+- See `docs/plans/2026-06-12-openai-request-timeout.md` for the bounded OpenAI
+  provider-call contract.
 
 ## Contributing
 
