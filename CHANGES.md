@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-12
+
+- Bounded enabled OpenAI execute requests to 30 seconds and disabled automatic
+  SDK retries so one interactive request has a predictable provider window.
+- Added an immutable, executable request-options contract and baseline guard.
+
 ## 2026-06-10
 
 - Added an explicit, default-off `DOCS_EXECUTE_ENABLED=true` deployment gate

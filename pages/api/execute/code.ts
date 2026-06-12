@@ -34,6 +34,7 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
+export const OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 });
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
 const ALLOWED_BODY_FIELDS = new Set(["code"]);
 const ALLOWED_MESSAGE_FIELDS = new Set(["role", "content"]);
@@ -453,6 +454,7 @@ export default async function handler(
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create(
       params as ChatCompletionCreateParamsNonStreaming,
+      OPENAI_REQUEST_OPTIONS,
     );
     return res.status(200).json(completion.choices);
   } catch {

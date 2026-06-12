@@ -34,6 +34,8 @@ Helpful reports include:
 - The spend-capable execute route must default to disabled and requires
   `DOCS_EXECUTE_ENABLED=true`. This interlock does not replace authentication or
   rate limiting for a public deployment.
+- Enabled OpenAI calls use a 30-second timeout with automatic SDK retries
+  disabled so one request cannot multiply provider attempts or run indefinitely.
 - GitHub Actions runs `make check` after `npm ci` on Node 20, 22, and 24 with
   commit-pinned actions, read-only repository access, and a moderate-severity
   audit gate so execute API and dependency guardrails stay enforced before

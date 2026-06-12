@@ -5,11 +5,15 @@ import {
   isExecuteApiEnabled,
   normalizeExecuteBody,
   normalizeChatRequest,
+  OPENAI_REQUEST_OPTIONS,
 } from "../pages/api/execute/code";
 
 function parseAndNormalize(code: string) {
   return normalizeChatRequest(extractParameters(code));
 }
+
+assert.deepEqual(OPENAI_REQUEST_OPTIONS, { timeout: 30_000, maxRetries: 0 });
+assert.equal(Object.isFrozen(OPENAI_REQUEST_OPTIONS), true);
 
 const validRequest = parseAndNormalize(`
   import OpenAI from "openai";
