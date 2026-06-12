@@ -85,7 +85,9 @@ submitted examples before calling the OpenAI SDK. Request bodies may only contai
 GitHub Actions installs dependencies with `npm ci` and runs `make check` on
 Node 20, 22, and 24 on Ubuntu 24.04 for pushes, pull requests, and manual dispatches. The
 workflow uses commit-pinned actions, read-only repository access, and a bounded
-runtime.
+runtime. It does not persist checkout credentials after source retrieval. The
+lockfile retains `esbuild 0.28.1` for the `tsx` test runner so the audit gate
+rejects the vulnerable 0.28.0 resolution.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -148,6 +150,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   execute route deployment interlock.
 - See `docs/plans/2026-06-12-openai-request-timeout.md` for the bounded OpenAI
   provider-call contract.
+- See `docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md` for
+  checkout token isolation and the patched test-runner dependency resolution.
 
 ## Contributing
 

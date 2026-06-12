@@ -22,6 +22,7 @@ Priority:
 - Keep `npm run dev`, `npm run lint`, `npm run build`, `npm run type-check`,
   and `npm test` meaningful
 - Keep GitHub Actions aligned with the local npm `make check` baseline
+- Keep a credential-free checkout and audited lockfile in GitHub Actions
 - Avoid committing API keys or proxy secrets
 - Keep the spend-capable execute route disabled unless deployment explicitly
   enables it
