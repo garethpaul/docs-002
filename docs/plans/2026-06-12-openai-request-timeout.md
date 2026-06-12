@@ -52,12 +52,14 @@ endpoint and can outlive the hosting platform's useful request window.
 
 ## Verification
 
-- `npm run test:parser`
-- `npm test`
-- Node 20, 22, and 24 clean-install matrix where locally available.
-- Mutation check: removing the timeout option must fail tests or the baseline.
-- Mutation check: restoring SDK retries must fail tests or the baseline.
-- `git diff --check`
+- Node 20.19.5, 22.22.2, and 24.16.0: clean `npm ci` followed by
+  `make check` passed the full `npm test` gate: ESLint, TypeScript, parser
+  tests, the Next.js production build, static baseline checks, and `npm audit`
+  with zero vulnerabilities.
+- Five isolated hostile mutations were rejected by the baseline: changing the
+  timeout, restoring retries, removing `Object.freeze`, removing the parser
+  value assertion, and changing this plan from completed to planned.
+- `git diff --check` passed.
 
 ## Reference
 
