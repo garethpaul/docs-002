@@ -39,7 +39,7 @@ Helpful reports include:
 - GitHub Actions runs `make check` after `npm ci` on Node 20, 22, and 24 with
   commit-pinned actions, read-only repository access, and a moderate-severity
   audit gate so execute API and dependency guardrails stay enforced before
-  merge.
+  merge. It does not persist checkout credentials after source retrieval.
 
 ## Service and API Notes
 

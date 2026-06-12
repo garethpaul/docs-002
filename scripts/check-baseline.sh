@@ -20,6 +20,7 @@ OWN_FIELD_PLAN="$ROOT_DIR/docs/plans/2026-06-09-own-field-validation.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
 REQUEST_TIMEOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-12-openai-request-timeout.md"
+CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -53,6 +54,7 @@ for path in \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-execute-api-enable-gate.md" \
   "docs/plans/2026-06-12-openai-request-timeout.md" \
+  "docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -69,6 +71,34 @@ fi
 
 if ! grep -Fq "permissions:" "$CI_WORKFLOW" || ! grep -Fq "contents: read" "$CI_WORKFLOW"; then
   printf '%s\n' "GitHub Actions workflow must keep repository access read-only." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 1 ] ||
+  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 1 ]; then
+  printf '%s\n' "GitHub Actions must use one pinned checkout without persisting credentials." >&2
+  exit 1
+fi
+
+if ! awk '
+  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; next }
+  checkout && /^[[:space:]]+with:[[:space:]]*$/ { options = 1; next }
+  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected = 1; next }
+  checkout && /^[[:space:]]+- / { exit }
+  END { exit protected ? 0 : 1 }
+' "$CI_WORKFLOW"; then
+  printf '%s\n' "Checkout credential persistence must be disabled on the pinned checkout step." >&2
+  exit 1
+fi
+
+if ! node -e '
+  const lock = require(process.argv[1]);
+  const entry = lock.packages && lock.packages["node_modules/esbuild"];
+  if (!entry || entry.version !== "0.28.1" ||
+      entry.resolved !== "https://registry.npmjs.org/esbuild/-/esbuild-0.28.1.tgz" ||
+      typeof entry.integrity !== "string" || !entry.integrity.startsWith("sha512-")) process.exit(1);
+' "$ROOT_DIR/package-lock.json"; then
+  printf '%s\n' "The lockfile must retain the reviewed esbuild 0.28.1 resolution and integrity." >&2
   exit 1
 fi
 
@@ -363,6 +393,24 @@ fi
 if ! grep -Fq "status: completed" "$REQUEST_TIMEOUT_PLAN" ||
   ! grep -Fq "npm test" "$REQUEST_TIMEOUT_PLAN"; then
   printf '%s\n' "OpenAI request timeout plan must remain completed and verified." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq 'Node 20 `npm test` passed' "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "external working directory" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "zero vulnerabilities" "$CHECKOUT_CREDENTIAL_PLAN"; then
+  printf '%s\n' "Checkout and esbuild plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "does not persist checkout credentials" "$README" ||
+  ! grep -Fq "esbuild 0.28.1" "$README" ||
+  ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "credential-free checkout" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Stopped checkout credential persistence" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the checkout and esbuild boundaries." >&2
   exit 1
 fi
 

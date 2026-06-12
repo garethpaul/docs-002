@@ -2,6 +2,8 @@
 
 ## 2026-06-12
 
+- Stopped checkout credential persistence and updated the transitive `esbuild`
+  lockfile resolution from vulnerable 0.28.0 to patched 0.28.1.
 - Bounded enabled OpenAI execute requests to 30 seconds and disabled automatic
   SDK retries so one interactive request has a predictable provider window.
 - Added an immutable, executable request-options contract and baseline guard.
