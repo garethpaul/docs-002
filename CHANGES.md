@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-13
+
+- Added a tested `Cache-Control: no-store` policy to every execute API response
+  so code, model output, and route errors are not intentionally cached.
+
 ## 2026-06-12
 
 - Stopped checkout credential persistence and updated the transitive `esbuild`

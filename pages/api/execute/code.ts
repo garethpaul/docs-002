@@ -34,6 +34,7 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
+export const EXECUTE_CACHE_CONTROL = "no-store";
 export const OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 });
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
 const ALLOWED_BODY_FIELDS = new Set(["code"]);
@@ -417,6 +418,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<unknown | ErrorResponse>,
 ) {
+  res.setHeader("Cache-Control", EXECUTE_CACHE_CONTROL);
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });

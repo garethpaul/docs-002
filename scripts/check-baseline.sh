@@ -21,6 +21,7 @@ CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
 REQUEST_TIMEOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-12-openai-request-timeout.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md"
+NO_STORE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-api-no-store.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -55,6 +56,7 @@ for path in \
   "docs/plans/2026-06-10-execute-api-enable-gate.md" \
   "docs/plans/2026-06-12-openai-request-timeout.md" \
   "docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md" \
+  "docs/plans/2026-06-13-execute-api-no-store.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -181,6 +183,7 @@ for required in \
   "MAX_MESSAGES" \
   "MAX_MESSAGE_CONTENT_LENGTH" \
   "MAX_COMPLETION_TOKENS" \
+  "EXECUTE_CACHE_CONTROL" \
   "extractParameters" \
   "hasJsonContentType" \
   "isExecuteApiEnabled" \
@@ -197,6 +200,13 @@ for required in \
     exit 1
   fi
 done
+
+if ! grep -Fq 'EXECUTE_CACHE_CONTROL = "no-store"' "$API" ||
+  ! grep -Fq 'res.setHeader("Cache-Control", EXECUTE_CACHE_CONTROL)' "$API" ||
+  ! grep -Fq 'assert.equal(EXECUTE_CACHE_CONTROL, "no-store")' "$PARSER_TEST"; then
+  printf '%s\n' "Execute API responses must keep the tested no-store cache policy." >&2
+  exit 1
+fi
 
 if ! grep -Fq "OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 })" "$API" ||
   ! grep -Fq "OPENAI_REQUEST_OPTIONS," "$API" ||
@@ -396,6 +406,14 @@ if ! grep -Fq "status: completed" "$REQUEST_TIMEOUT_PLAN" ||
   exit 1
 fi
 
+if ! grep -Fq "status: completed" "$NO_STORE_PLAN" ||
+  ! grep -Fq "make check" "$NO_STORE_PLAN" ||
+  ! grep -Fq "removing the response header failed" "$NO_STORE_PLAN" ||
+  ! grep -Fq 'changing the policy to `no-cache` failed' "$NO_STORE_PLAN"; then
+  printf '%s\n' "Execute API no-store plan must record completed verification." >&2
+  exit 1
+fi
+
 if ! grep -Fq "status: completed" "$CHECKOUT_CREDENTIAL_PLAN" ||
   ! grep -Fq 'Node 20 `npm test` passed' "$CHECKOUT_CREDENTIAL_PLAN" ||
   ! grep -Fq "external working directory" "$CHECKOUT_CREDENTIAL_PLAN" ||
@@ -411,6 +429,14 @@ if ! grep -Fq "does not persist checkout credentials" "$README" ||
   ! grep -Fq "credential-free checkout" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Stopped checkout credential persistence" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Project guidance must document the checkout and esbuild boundaries." >&2
+  exit 1
+fi
+
+if ! grep -Fq "no-store" "$README" ||
+  ! grep -Fq "no-store" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "no-store" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "no-store" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the execute API no-store boundary." >&2
   exit 1
 fi
 
