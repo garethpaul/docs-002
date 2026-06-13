@@ -120,7 +120,9 @@ assert.equal(parseAndNormalize("const value = 1;"), null);
 
 assert.equal(hasJsonContentType("application/json"), true);
 assert.equal(hasJsonContentType("Application/JSON; charset=utf-8"), true);
-assert.equal(hasJsonContentType(["text/plain", "application/json"]), true);
+assert.equal(hasJsonContentType(["text/plain", "application/json"]), false);
+assert.equal(hasJsonContentType(["application/json", "application/json"]), false);
+assert.equal(hasJsonContentType([]), false);
 assert.equal(hasJsonContentType("text/plain"), false);
 assert.equal(hasJsonContentType(undefined), false);
 
