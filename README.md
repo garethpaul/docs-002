@@ -121,10 +121,11 @@ When the required SDK or runtime is unavailable, use static checks and source re
   before reading `code`, `model`, `messages`, `role`, or `content`.
 - Enabled provider calls use a fixed 30-second timeout with SDK retries disabled
   so one interactive request has a bounded OpenAI attempt.
-- Enabled traffic is limited to ten enabled POST attempts per process per minute;
-  exhausted windows return `429` with `Retry-After` before parsing or provider
-  client construction. Multi-instance deployments still require an upstream
-  shared limiter.
+- Provider-eligible requests consume the process-local budget only after
+  Content-Type, body, code, parameter, and API-key validation. Ten eligible
+  attempts per process per minute are admitted; exhausted windows return `429`
+  with `Retry-After` before provider client construction. Multi-instance
+  deployments still require an upstream shared limiter.
 - Execute API responses use `Cache-Control: no-store` so code, model output,
   and errors are not intentionally cached.
 - Execute content-type validation rejects multi-value Content-Type headers to
@@ -169,6 +170,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   cache boundary.
 - See `docs/plans/2026-06-13-execute-fixed-window-budget.md` for the process-local
   execute request budget.
+- See `docs/plans/2026-06-13-provider-eligible-execute-budget.md` for local
+  validation ordering before execute capacity consumption.
 
 ## Contributing
 

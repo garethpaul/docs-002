@@ -25,6 +25,7 @@ CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-an
 NO_STORE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-api-no-store.md"
 EXECUTE_RATE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-fixed-window-budget.md"
 SINGLE_CONTENT_TYPE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-single-json-content-type.md"
+PROVIDER_ELIGIBLE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-provider-eligible-execute-budget.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -62,6 +63,7 @@ for path in \
   "docs/plans/2026-06-13-execute-api-no-store.md" \
   "docs/plans/2026-06-13-execute-fixed-window-budget.md" \
   "docs/plans/2026-06-13-single-json-content-type.md" \
+  "docs/plans/2026-06-13-provider-eligible-execute-budget.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -248,14 +250,19 @@ fi
 
 if ! awk '
   /if \(enforceExecuteRateLimit\(res\)\)/ { limiter = NR }
+  /hasJsonContentType\(req.headers\["content-type"\]\)/ { content_type = NR }
   /normalizeExecuteBody\(req.body\)/ { body = NR }
+  /normalizeChatRequest\(extractParameters\(body.code\)\)/ { params = NR }
+  /if \(!process.env.OPENAI_API_KEY\)/ { api_key = NR }
   /new OpenAI/ { client = NR }
-  END { exit !(limiter && body && client && limiter < body && body < client) }
+  END { exit !(content_type && body && params && api_key && limiter && client && content_type < body && body < params && params < api_key && api_key < limiter && limiter < client) }
 ' "$API" ||
   ! grep -Fq "enforceExecuteRateLimit(limitedResponse" "$PARSER_TEST" ||
   ! grep -Fq "assert.equal(limitedResponse.statusCode, 429)" "$PARSER_TEST" ||
-  ! grep -Fq 'limitedResponse.headers["Retry-After"]' "$PARSER_TEST"; then
-  printf '%s\n' "Execute capacity must reject at the route boundary before parsing and provider setup." >&2
+  ! grep -Fq 'limitedResponse.headers["Retry-After"]' "$PARSER_TEST" ||
+  ! grep -Fq "invalidContentTypeResponse.statusCode, 415" "$PARSER_TEST" ||
+  ! grep -Fq "currentWindow = Date.now()" "$PARSER_TEST"; then
+  printf '%s\n' "Execute capacity must apply after local validation and before provider setup." >&2
   exit 1
 fi
 
@@ -465,9 +472,9 @@ if ! grep -Fq "status: completed" "$NO_STORE_PLAN" ||
   exit 1
 fi
 
-if ! grep -Fq "ten enabled POST attempts per process per minute" "$README" ||
+if ! grep -Fq "Ten eligible" "$README" ||
   ! grep -Fq "process-local fixed-window budget" "$ROOT_DIR/SECURITY.md" ||
-  ! grep -Fq "process-local execute request budget" "$VISION" ||
+  ! grep -Fq "shared upstream enforcement" "$VISION" ||
   ! grep -Fq "Added a process-local fixed-window execute budget" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Project guidance must document the execute request budget and deployment boundary." >&2
   exit 1
@@ -478,6 +485,22 @@ if ! grep -Fq "status: completed" "$EXECUTE_RATE_BUDGET_PLAN" ||
   ! grep -Fq "hostile mutations were rejected" "$EXECUTE_RATE_BUDGET_PLAN" ||
   ! grep -Fq "no live OpenAI" "$EXECUTE_RATE_BUDGET_PLAN"; then
   printf '%s\n' "Execute fixed-window budget plan must record completed local verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Provider-eligible requests consume the process-local budget" "$README" ||
+  ! grep -Fq "locally valid, configured requests consume capacity" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Consume execute capacity only after local validation" "$VISION" ||
+  ! grep -Fq "Moved execute capacity consumption after local validation" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document provider-eligible budget consumption." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$PROVIDER_ELIGIBLE_BUDGET_PLAN" ||
+  ! grep -Fq "Node.js 20.19.5, 22.22.2, and 24.16.0" "$PROVIDER_ELIGIBLE_BUDGET_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$PROVIDER_ELIGIBLE_BUDGET_PLAN" ||
+  ! grep -Fq "No live OpenAI" "$PROVIDER_ELIGIBLE_BUDGET_PLAN"; then
+  printf '%s\n' "Provider-eligible execute budget plan must record completed verification." >&2
   exit 1
 fi
 
