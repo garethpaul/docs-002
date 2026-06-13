@@ -16,6 +16,7 @@ type JsonObject = { [key: string]: JsonValue };
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 type HeaderValue = string | string[] | undefined;
 type ExecuteBody = { code: string };
+type RateLimitDecision = { allowed: boolean; retryAfterSeconds: number };
 type ChatCompletionParams = {
   model: string;
   messages: ChatMessage[];
@@ -34,6 +35,8 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
+export const EXECUTE_RATE_LIMIT_MAX_REQUESTS = 10;
+export const EXECUTE_RATE_LIMIT_WINDOW_MS = 60_000;
 export const EXECUTE_CACHE_CONTROL = "no-store";
 export const OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 });
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
@@ -59,6 +62,61 @@ export const config = {
     },
   },
 };
+
+export function createFixedWindowRateLimiter(maxRequests: number, windowMs: number) {
+  if (!Number.isInteger(maxRequests) || maxRequests <= 0) {
+    throw new TypeError("maxRequests must be a positive integer");
+  }
+  if (!Number.isInteger(windowMs) || windowMs <= 0) {
+    throw new TypeError("windowMs must be a positive integer");
+  }
+
+  let windowStartedAt: number | null = null;
+  let requestCount = 0;
+
+  return (now = Date.now()): RateLimitDecision => {
+    if (!Number.isFinite(now)) {
+      throw new TypeError("now must be finite");
+    }
+
+    if (
+      windowStartedAt === null ||
+      now < windowStartedAt ||
+      now - windowStartedAt >= windowMs
+    ) {
+      windowStartedAt = now;
+      requestCount = 0;
+    }
+
+    const remainingMs = Math.max(1, windowMs - (now - windowStartedAt));
+    const retryAfterSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+    if (requestCount >= maxRequests) {
+      return { allowed: false, retryAfterSeconds };
+    }
+
+    requestCount += 1;
+    return { allowed: true, retryAfterSeconds };
+  };
+}
+
+const consumeExecuteCapacity = createFixedWindowRateLimiter(
+  EXECUTE_RATE_LIMIT_MAX_REQUESTS,
+  EXECUTE_RATE_LIMIT_WINDOW_MS,
+);
+
+export function enforceExecuteRateLimit(
+  res: NextApiResponse<unknown | ErrorResponse>,
+  now = Date.now(),
+) {
+  const rateLimit = consumeExecuteCapacity(now);
+  if (rateLimit.allowed) {
+    return false;
+  }
+
+  res.setHeader("Retry-After", String(rateLimit.retryAfterSeconds));
+  res.status(429).json({ error: "Execute API request limit exceeded" });
+  return true;
+}
 
 function isNamedMember(expression: unknown, propertyName: string): expression is MemberExpression {
   const member = expression as MemberExpression;
@@ -427,6 +485,10 @@ export default async function handler(
 
   if (!isExecuteApiEnabled()) {
     return res.status(503).json({ error: "Execute API is disabled" });
+  }
+
+  if (enforceExecuteRateLimit(res)) {
+    return;
   }
 
   if (!hasJsonContentType(req.headers["content-type"])) {

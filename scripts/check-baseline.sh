@@ -7,6 +7,7 @@ API="$ROOT_DIR/pages/api/execute/code.ts"
 EDITOR="$ROOT_DIR/components/Editor.tsx"
 PARSER_TEST="$ROOT_DIR/scripts/test-execute-parser.ts"
 README="$ROOT_DIR/README.md"
+VISION="$ROOT_DIR/VISION.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-execute-api-baseline.md"
 LINT_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-lint-gate.md"
 CHECK_PLAN="$ROOT_DIR/docs/plans/2026-06-08-docs-check-wrapper.md"
@@ -22,6 +23,7 @@ EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
 REQUEST_TIMEOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-12-openai-request-timeout.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md"
 NO_STORE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-api-no-store.md"
+EXECUTE_RATE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-fixed-window-budget.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -57,6 +59,7 @@ for path in \
   "docs/plans/2026-06-12-openai-request-timeout.md" \
   "docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md" \
   "docs/plans/2026-06-13-execute-api-no-store.md" \
+  "docs/plans/2026-06-13-execute-fixed-window-budget.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -213,6 +216,38 @@ if ! grep -Fq "OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetr
   ! grep -Fq "assert.deepEqual(OPENAI_REQUEST_OPTIONS, { timeout: 30_000, maxRetries: 0 })" "$PARSER_TEST" ||
   ! grep -Fq "Object.isFrozen(OPENAI_REQUEST_OPTIONS)" "$PARSER_TEST"; then
   printf '%s\n' "OpenAI execute requests must keep the tested 30-second zero-retry boundary." >&2
+  exit 1
+fi
+
+if ! grep -Fq "EXECUTE_RATE_LIMIT_MAX_REQUESTS = 10" "$API" ||
+  ! grep -Fq "EXECUTE_RATE_LIMIT_WINDOW_MS = 60_000" "$API" ||
+  ! grep -Fq "createFixedWindowRateLimiter" "$API" ||
+  ! grep -Fq "enforceExecuteRateLimit" "$API" ||
+  ! grep -Fq 'res.setHeader("Retry-After", String(rateLimit.retryAfterSeconds))' "$API" ||
+  ! grep -Fq "res.status(429)" "$API"; then
+  printf '%s\n' "Enabled execute POST attempts must keep the fixed-window request budget." >&2
+  exit 1
+fi
+
+if ! grep -Fq "consumeCapacity(1_000)" "$PARSER_TEST" ||
+  ! grep -Fq "consumeCapacity(60_000)" "$PARSER_TEST" ||
+  ! grep -Fq "consumeCapacity(61_000)" "$PARSER_TEST" ||
+  ! grep -Fq "consumeCapacity(500)" "$PARSER_TEST" ||
+  ! grep -Fq "Number.POSITIVE_INFINITY" "$PARSER_TEST"; then
+  printf '%s\n' "Execute tests must cover capacity, rejection, rollover, and clock recovery." >&2
+  exit 1
+fi
+
+if ! awk '
+  /if \(enforceExecuteRateLimit\(res\)\)/ { limiter = NR }
+  /normalizeExecuteBody\(req.body\)/ { body = NR }
+  /new OpenAI/ { client = NR }
+  END { exit !(limiter && body && client && limiter < body && body < client) }
+' "$API" ||
+  ! grep -Fq "enforceExecuteRateLimit(limitedResponse" "$PARSER_TEST" ||
+  ! grep -Fq "assert.equal(limitedResponse.statusCode, 429)" "$PARSER_TEST" ||
+  ! grep -Fq 'limitedResponse.headers["Retry-After"]' "$PARSER_TEST"; then
+  printf '%s\n' "Execute capacity must reject at the route boundary before parsing and provider setup." >&2
   exit 1
 fi
 
@@ -411,6 +446,22 @@ if ! grep -Fq "status: completed" "$NO_STORE_PLAN" ||
   ! grep -Fq "removing the response header failed" "$NO_STORE_PLAN" ||
   ! grep -Fq 'changing the policy to `no-cache` failed' "$NO_STORE_PLAN"; then
   printf '%s\n' "Execute API no-store plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "ten enabled POST attempts per process per minute" "$README" ||
+  ! grep -Fq "process-local fixed-window budget" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "process-local execute request budget" "$VISION" ||
+  ! grep -Fq "Added a process-local fixed-window execute budget" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the execute request budget and deployment boundary." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$EXECUTE_RATE_BUDGET_PLAN" ||
+  ! grep -Fq "Node.js 20.19.5, 22.22.2, and 24.16.0" "$EXECUTE_RATE_BUDGET_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$EXECUTE_RATE_BUDGET_PLAN" ||
+  ! grep -Fq "no live OpenAI" "$EXECUTE_RATE_BUDGET_PLAN"; then
+  printf '%s\n' "Execute fixed-window budget plan must record completed local verification." >&2
   exit 1
 fi
 
