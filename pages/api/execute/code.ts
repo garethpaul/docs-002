@@ -278,12 +278,11 @@ function allowedModels() {
 }
 
 export function hasJsonContentType(contentType: HeaderValue): boolean {
-  if (Array.isArray(contentType)) {
-    return contentType.some(hasJsonContentType);
+  if (typeof contentType !== "string") {
+    return false;
   }
 
   return (
-    typeof contentType === "string" &&
     contentType.split(";")[0].trim().toLowerCase() === "application/json"
   );
 }

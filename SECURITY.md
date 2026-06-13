@@ -40,6 +40,8 @@ Helpful reports include:
   minute and rejects excess traffic before parsing with `429` and
   `Retry-After`. Public multi-instance deployments still require shared
   upstream authentication and rate limiting.
+- Ambiguous multi-value Content-Type headers are rejected before request-body
+  normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,
   provider output, and route errors are not intentionally cached.
 - GitHub Actions runs `make check` after `npm ci` on Node 20, 22, and 24 with

@@ -80,8 +80,10 @@ TypeScript/TSX lint gate, TypeScript checks, focused execute parser/validator
 regression tests, the Next build, the source baseline guard, and
 `npm audit --audit-level=moderate`. The execute API remains disabled unless
 `DOCS_EXECUTE_ENABLED=true` and requires `OPENAI_API_KEY` at runtime. It accepts
-`Content-Type: application/json` requests only and validates
-submitted examples before calling the OpenAI SDK. Request bodies may only contain a `code` string. Chat message objects may only contain `role` and `content`.
+`Content-Type: application/json` requests only, rejects multi-value Content-Type
+headers, and validates submitted examples before calling the OpenAI SDK.
+Request bodies may only contain a `code` string. Chat message objects may only
+contain `role` and `content`.
 Every execute API response sets `Cache-Control: no-store` so submitted code,
 provider output, and route errors are not intentionally retained by shared or
 browser caches.
@@ -125,6 +127,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   shared limiter.
 - Execute API responses use `Cache-Control: no-store` so code, model output,
   and errors are not intentionally cached.
+- Execute content-type validation rejects multi-value Content-Type headers to
+  avoid ambiguous request interpretation before body normalization.
 
 ## Security and Privacy Notes
 
