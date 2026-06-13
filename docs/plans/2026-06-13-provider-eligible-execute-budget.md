@@ -1,6 +1,6 @@
 # Consume Execute Capacity Only for Provider-Eligible Requests
 
-Status: In Progress
+Status: Completed
 
 ## Context
 
@@ -54,3 +54,28 @@ request becoming eligible to call OpenAI.
   deployments still require shared identity-aware rate limiting.
 - Requests that pass local validation but fail at the provider still consume a
   slot, which intentionally bounds spend-capable attempts.
+
+## Work Completed
+
+- Moved fixed-window capacity consumption after Content-Type, body, code,
+  parameter, and API-key validation and immediately before provider setup.
+- Added an offline handler regression that exhausts the real module-level
+  limiter and proves an invalid Content-Type remains a `415` response.
+- Replaced the earlier pre-parsing ordering contract with a full ordered route
+  contract from Content-Type validation through provider construction.
+- Updated project guidance and completed-plan enforcement without changing the
+  budget size, duration, response payloads, dependencies, or parser behavior.
+
+## Verification Completed
+
+- Node.js 20.19.5, 22.22.2, and 24.16.0 `make check` passed lint, type-check,
+  parser tests, production builds, baseline contracts, and moderate-severity
+  audits with zero vulnerabilities.
+- The rooted external-working-directory `make check` passed on Node.js 20.19.5.
+- Node.js 20.19.5 focused parser, type-check, and lint gates passed.
+- The isolated temporary final-state baseline checker and parser suite passed.
+- Nine isolated hostile mutations were rejected across early consumption,
+  post-client enforcement, API-key guard removal, limiter bypass, runtime
+  regression drift, documentation, and plan status.
+- Shell syntax and `git diff --check` passed.
+- No live OpenAI request, real credential, or deployment was used.

@@ -36,10 +36,11 @@ Helpful reports include:
   rate limiting for a public deployment.
 - Enabled OpenAI calls use a 30-second timeout with automatic SDK retries
   disabled so one request cannot multiply provider attempts or run indefinitely.
-- A process-local fixed-window budget admits ten enabled POST attempts per
-  minute and rejects excess traffic before parsing with `429` and
-  `Retry-After`. Public multi-instance deployments still require shared
-  upstream authentication and rate limiting.
+- A process-local fixed-window budget admits ten provider-eligible attempts per
+  minute. Only locally valid, configured requests consume capacity, and excess
+  eligible traffic receives `429` with `Retry-After` before provider setup.
+  Public multi-instance deployments still require shared upstream
+  authentication and rate limiting.
 - Ambiguous multi-value Content-Type headers are rejected before request-body
   normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import type { NextApiResponse } from "next";
-import {
+import type { NextApiRequest, NextApiResponse } from "next";
+import executeHandler, {
   createFixedWindowRateLimiter,
   enforceExecuteRateLimit,
   EXECUTE_CACHE_CONTROL,
@@ -84,6 +84,38 @@ assert.equal(
 assert.equal(limitedResponse.statusCode, 429);
 assert.match(limitedResponse.headers["Retry-After"], /^[1-9][0-9]*$/);
 assert.deepEqual(limitedResponse.body, { error: "Execute API request limit exceeded" });
+
+const originalExecuteEnabled = process.env.DOCS_EXECUTE_ENABLED;
+try {
+  process.env.DOCS_EXECUTE_ENABLED = "true";
+  const currentWindow = Date.now();
+  for (let request = 0; request < EXECUTE_RATE_LIMIT_MAX_REQUESTS; request += 1) {
+    enforceExecuteRateLimit(
+      createTestResponse() as unknown as NextApiResponse,
+      currentWindow,
+    );
+  }
+
+  const invalidContentTypeResponse = createTestResponse();
+  void executeHandler(
+    {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: { code: "const invalid = true;" },
+    } as NextApiRequest,
+    invalidContentTypeResponse as unknown as NextApiResponse,
+  );
+  assert.equal(invalidContentTypeResponse.statusCode, 415);
+  assert.deepEqual(invalidContentTypeResponse.body, {
+    error: "Request content type must be application/json",
+  });
+} finally {
+  if (originalExecuteEnabled === undefined) {
+    delete process.env.DOCS_EXECUTE_ENABLED;
+  } else {
+    process.env.DOCS_EXECUTE_ENABLED = originalExecuteEnabled;
+  }
+}
 
 const validRequest = parseAndNormalize(`
   import OpenAI from "openai";
