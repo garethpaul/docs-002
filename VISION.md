@@ -46,6 +46,8 @@ Current baseline:
 - `DOCS_EXECUTE_ENABLED=true` is required before any provider request can run;
   public deployments still need upstream authentication and rate limiting.
 - Enabled provider calls use a 30-second timeout with SDK retries disabled.
+- Keep a process-local execute request budget before parsing and provider setup;
+  require shared upstream enforcement for public multi-instance deployments.
 - Execute API responses use `Cache-Control: no-store` to avoid intentionally
   caching submitted code, provider output, or errors.
 - The editor sends the current code string directly and avoids logging prompt

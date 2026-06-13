@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import type { NextApiResponse } from "next";
 import {
+  createFixedWindowRateLimiter,
+  enforceExecuteRateLimit,
   EXECUTE_CACHE_CONTROL,
+  EXECUTE_RATE_LIMIT_MAX_REQUESTS,
+  EXECUTE_RATE_LIMIT_WINDOW_MS,
   extractParameters,
   hasJsonContentType,
   isExecuteApiEnabled,
@@ -9,6 +14,34 @@ import {
   OPENAI_REQUEST_OPTIONS,
 } from "../pages/api/execute/code";
 
+type TestResponse = {
+  body: unknown;
+  headers: Record<string, string>;
+  statusCode: number;
+  setHeader(name: string, value: string): void;
+  status(code: number): TestResponse;
+  json(body: unknown): TestResponse;
+};
+
+function createTestResponse(): TestResponse {
+  return {
+    body: null,
+    headers: {},
+    statusCode: 200,
+    setHeader(name, value) {
+      this.headers[name] = value;
+    },
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    },
+  };
+}
+
 function parseAndNormalize(code: string) {
   return normalizeChatRequest(extractParameters(code));
 }
@@ -16,6 +49,41 @@ function parseAndNormalize(code: string) {
 assert.deepEqual(OPENAI_REQUEST_OPTIONS, { timeout: 30_000, maxRetries: 0 });
 assert.equal(Object.isFrozen(OPENAI_REQUEST_OPTIONS), true);
 assert.equal(EXECUTE_CACHE_CONTROL, "no-store");
+assert.equal(EXECUTE_RATE_LIMIT_MAX_REQUESTS, 10);
+assert.equal(EXECUTE_RATE_LIMIT_WINDOW_MS, 60_000);
+
+const consumeCapacity = createFixedWindowRateLimiter(
+  EXECUTE_RATE_LIMIT_MAX_REQUESTS,
+  EXECUTE_RATE_LIMIT_WINDOW_MS,
+);
+for (let request = 0; request < EXECUTE_RATE_LIMIT_MAX_REQUESTS; request += 1) {
+  assert.deepEqual(consumeCapacity(1_000), { allowed: true, retryAfterSeconds: 60 });
+}
+assert.deepEqual(consumeCapacity(1_000), { allowed: false, retryAfterSeconds: 60 });
+assert.deepEqual(consumeCapacity(60_000), { allowed: false, retryAfterSeconds: 1 });
+assert.deepEqual(consumeCapacity(61_000), { allowed: true, retryAfterSeconds: 60 });
+assert.deepEqual(consumeCapacity(500), { allowed: true, retryAfterSeconds: 60 });
+assert.throws(() => createFixedWindowRateLimiter(0, 60_000), TypeError);
+assert.throws(() => createFixedWindowRateLimiter(10, Number.NaN), TypeError);
+assert.throws(() => consumeCapacity(Number.POSITIVE_INFINITY), TypeError);
+
+for (let request = 0; request < EXECUTE_RATE_LIMIT_MAX_REQUESTS; request += 1) {
+  const response = createTestResponse();
+  assert.equal(
+    enforceExecuteRateLimit(response as unknown as NextApiResponse, 10_000),
+    false,
+  );
+  assert.equal(response.statusCode, 200);
+}
+
+const limitedResponse = createTestResponse();
+assert.equal(
+  enforceExecuteRateLimit(limitedResponse as unknown as NextApiResponse, 10_000),
+  true,
+);
+assert.equal(limitedResponse.statusCode, 429);
+assert.match(limitedResponse.headers["Retry-After"], /^[1-9][0-9]*$/);
+assert.deepEqual(limitedResponse.body, { error: "Execute API request limit exceeded" });
 
 const validRequest = parseAndNormalize(`
   import OpenAI from "openai";

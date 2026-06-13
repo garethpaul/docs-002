@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Added a process-local fixed-window execute budget that rejects excess enabled
+  POST attempts with `429` and `Retry-After` before parsing or provider setup.
 - Added a tested `Cache-Control: no-store` policy to every execute API response
   so code, model output, and route errors are not intentionally cached.
 

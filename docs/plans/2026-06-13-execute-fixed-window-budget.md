@@ -2,7 +2,7 @@
 title: Execute Fixed Window Budget
 type: security
 date: 2026-06-13
-status: planned
+status: completed
 ---
 
 # Execute Fixed Window Budget
@@ -81,23 +81,29 @@ each call has bounded input, timeout, retries, and response caching behavior.
 ### U3. Enforce And Document The Boundary
 
 - **Files:** `scripts/check-baseline.sh`, `README.md`, `SECURITY.md`, `VISION.md`,
-  `CHANGES.md`, `AGENTS.md`
+  `CHANGES.md`
 - **Goal:** Keep the fixed-window source, regressions, limitations, and completed
   verification evidence part of every full repository gate.
 - **Covers:** R7
 
 ## Verification
 
-- Run focused parser tests, lint, typecheck, production build, dependency audit,
-  `make check`, and an external-working-directory check on available supported
-  Node.js versions.
-- Run whitespace, secret-pattern, generated-artifact, lockfile, and exact-path
-  inspections.
-- Apply isolated mutations for removed capacity checks, changed limits or
-  windows, missing `429` or `Retry-After`, removed rollover/backward-clock tests,
-  documentation drift, and incomplete plan status; each must fail.
-- Do not enable the route, use an OpenAI key, make live provider requests, or
-  claim distributed multi-instance rate limiting.
+- Node.js 20.19.5, 22.22.2, and 24.16.0 passed parser tests, zero-warning lint,
+  TypeScript typechecking, the Next.js production build, and the
+  moderate-severity dependency audit with zero vulnerabilities.
+- `make check` passed on Node.js 20.19.5, 22.22.2, and 24.16.0, and the rooted
+  external-working-directory wrapper passed from `/tmp` on Node.js 20.19.5.
+- Ten hostile mutations were rejected for changed capacity or window, removed
+  route enforcement or `Retry-After`, changed status, removed rollover,
+  backward-clock, or route regressions, documentation drift, and incomplete
+  plan status.
+- Shell syntax, `git diff --check`, exact-path inspection, unchanged lockfile,
+  secret-pattern inspection, and generated-artifact inspection passed.
+- `agent-browser` was not installed, so the pipeline browser skill could not
+  run. The change is API-only and has deterministic route-level coverage.
+- Verification did not enable the deployed route or use an OpenAI key. It made
+  no live OpenAI request and does not claim distributed multi-instance rate
+  limiting.
 
 ## Risks
 
