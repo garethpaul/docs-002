@@ -36,6 +36,8 @@ Helpful reports include:
   rate limiting for a public deployment.
 - Enabled OpenAI calls use a 30-second timeout with automatic SDK retries
   disabled so one request cannot multiply provider attempts or run indefinitely.
+- Execute API responses set `Cache-Control: no-store` so submitted code,
+  provider output, and route errors are not intentionally cached.
 - GitHub Actions runs `make check` after `npm ci` on Node 20, 22, and 24 with
   commit-pinned actions, read-only repository access, and a moderate-severity
   audit gate so execute API and dependency guardrails stay enforced before

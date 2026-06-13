@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  EXECUTE_CACHE_CONTROL,
   extractParameters,
   hasJsonContentType,
   isExecuteApiEnabled,
@@ -14,6 +15,7 @@ function parseAndNormalize(code: string) {
 
 assert.deepEqual(OPENAI_REQUEST_OPTIONS, { timeout: 30_000, maxRetries: 0 });
 assert.equal(Object.isFrozen(OPENAI_REQUEST_OPTIONS), true);
+assert.equal(EXECUTE_CACHE_CONTROL, "no-store");
 
 const validRequest = parseAndNormalize(`
   import OpenAI from "openai";

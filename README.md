@@ -82,6 +82,9 @@ regression tests, the Next build, the source baseline guard, and
 `DOCS_EXECUTE_ENABLED=true` and requires `OPENAI_API_KEY` at runtime. It accepts
 `Content-Type: application/json` requests only and validates
 submitted examples before calling the OpenAI SDK. Request bodies may only contain a `code` string. Chat message objects may only contain `role` and `content`.
+Every execute API response sets `Cache-Control: no-store` so submitted code,
+provider output, and route errors are not intentionally retained by shared or
+browser caches.
 GitHub Actions installs dependencies with `npm ci` and runs `make check` on
 Node 20, 22, and 24 on Ubuntu 24.04 for pushes, pull requests, and manual dispatches. The
 workflow uses commit-pinned actions, read-only repository access, and a bounded
@@ -116,6 +119,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   before reading `code`, `model`, `messages`, `role`, or `content`.
 - Enabled provider calls use a fixed 30-second timeout with SDK retries disabled
   so one interactive request has a bounded OpenAI attempt.
+- Execute API responses use `Cache-Control: no-store` so code, model output,
+  and errors are not intentionally cached.
 
 ## Security and Privacy Notes
 
@@ -152,6 +157,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   provider-call contract.
 - See `docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md` for
   checkout token isolation and the patched test-runner dependency resolution.
+- See `docs/plans/2026-06-13-execute-api-no-store.md` for the execute response
+  cache boundary.
 
 ## Contributing
 
