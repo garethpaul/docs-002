@@ -172,6 +172,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
   execute request budget.
 - See `docs/plans/2026-06-13-provider-eligible-execute-budget.md` for local
   validation ordering before execute capacity consumption.
+- Use [`INTEGRATION_VERIFICATION.md`](INTEGRATION_VERIFICATION.md) for
+  exact-head browser, deployed route, deployment edge, and provider evidence.
+  It requires isolated synthetic requests and sanitized outcomes.
 
 ## Contributing
 

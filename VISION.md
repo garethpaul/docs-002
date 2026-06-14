@@ -54,6 +54,8 @@ Current baseline:
   caching submitted code, provider output, or errors.
 - The editor sends the current code string directly and avoids logging prompt
   content, parsed parameters, or provider responses.
+- Keep exact-head browser, deployment, and provider evidence sanitized and
+  separate from portable package verification.
 
 Next priorities:
 

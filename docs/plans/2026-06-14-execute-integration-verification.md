@@ -1,13 +1,13 @@
 ---
 title: Execute Integration Verification Matrix
 type: reliability
-status: in_progress
+status: completed
 date: 2026-06-14
 ---
 
 # Execute Integration Verification Matrix
 
-## Status: In Progress
+## Status: Completed
 
 ## Problem Frame
 
@@ -54,3 +54,29 @@ deployment configuration, browser behavior, or provider responses.
 - `npm audit --audit-level=moderate`
 - Isolated hostile documentation mutations
 - Exact diff, generated-artifact, and secret-pattern audits
+
+## Work Completed
+
+- Added a 14-scenario exact-head integration matrix covering deployment
+  setup, route controls, editor submissions, provider outcomes, response
+  caching, request budgeting, browser refresh behavior, and public edge
+  controls.
+- Required isolated synthetic deployments and requests, sanitized evidence,
+  exact commit and pull-request attribution, and explicit `pass`, `fail`,
+  `blocked`, or `not run` statuses.
+- Kept portable package checks separate from local route, browser, deployment,
+  and live provider evidence.
+- Added mutation-sensitive static contracts without changing route, editor,
+  parser, dependency, configuration, or deployment behavior.
+
+## Verification Completed
+
+- `sh -n scripts/check-baseline.sh` and the focused static gate passed.
+- `make check` passed from the repository and an external working directory.
+- The pinned package gate passed with Node.js 20.19.5 and Node.js 24.16.0,
+  including lint, type-check, parser tests, production build, static checks,
+  and dependency audit with zero vulnerabilities.
+- Twelve isolated hostile documentation mutations were rejected.
+- No browser, deployed execute route, deployment edge, or live OpenAI provider
+  scenario was executed; all 14 integration scenarios remain truthfully
+  marked `not run`.

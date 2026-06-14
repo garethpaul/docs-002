@@ -45,6 +45,9 @@ Helpful reports include:
   normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,
   provider output, and route errors are not intentionally cached.
+- Browser, deployment, and provider claims require the exact-head integration
+  matrix with synthetic requests and sanitized evidence; portable checks do
+  not establish public authentication or shared rate-limit enforcement.
 - GitHub Actions runs `make check` after `npm ci` on Node 20, 22, and 24 with
   commit-pinned actions, read-only repository access, and a moderate-severity
   audit gate so execute API and dependency guardrails stay enforced before

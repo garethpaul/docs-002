@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-14
+
+- Added an exact-head execute integration verification matrix that separates
+  portable package checks from sanitized browser, deployment, and provider
+  evidence.
+
 ## 2026-06-13
 
 - Moved execute capacity consumption after local validation and API-key checks
