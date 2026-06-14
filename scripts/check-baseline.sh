@@ -26,6 +26,7 @@ NO_STORE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-api-no-store.md"
 EXECUTE_RATE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-fixed-window-budget.md"
 SINGLE_CONTENT_TYPE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-single-json-content-type.md"
 PROVIDER_ELIGIBLE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-provider-eligible-execute-budget.md"
+MAKE_ROOT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-make-root-override-protection.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -64,6 +65,7 @@ for path in \
   "docs/plans/2026-06-13-execute-fixed-window-budget.md" \
   "docs/plans/2026-06-13-single-json-content-type.md" \
   "docs/plans/2026-06-13-provider-eligible-execute-budget.md" \
+  "docs/plans/2026-06-14-make-root-override-protection.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -127,11 +129,24 @@ if ! grep -Fq "runs-on: ubuntu-24.04" "$CI_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$MAKEFILE" ||
+if ! grep -Fxq 'override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$MAKEFILE" ||
   [ "$(grep -c '\$(NPM) --prefix \$(ROOT)' "$MAKEFILE")" -ne 4 ]; then
-  printf '%s\n' "Make targets must run npm from the repository root." >&2
+  printf '%s\n' "Make targets must protect and use the repository root." >&2
   exit 1
 fi
+
+for make_root_plan_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "## Work Completed" \
+  "## Verification Completed" \
+  "zero vulnerabilities" \
+  "Three isolated hostile assignment mutations were rejected"; do
+  if ! grep -Fq "$make_root_plan_contract" "$MAKE_ROOT_PLAN"; then
+    printf '%s\n' "Make-root plan must record completed evidence: $make_root_plan_contract" >&2
+    exit 1
+  fi
+done
 
 node - "$PACKAGE_JSON" <<'NODE'
 const fs = require("fs");
