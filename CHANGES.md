@@ -2,6 +2,8 @@
 
 ## 2026-06-15
 
+- Rejected whitespace-only execute message content before provider capacity
+  consumption while preserving accepted content unchanged.
 - Made explicitly empty model allowlists fail closed instead of restoring
   built-in defaults.
 - Rejected whitespace-only OpenAI API keys before execute capacity consumption.

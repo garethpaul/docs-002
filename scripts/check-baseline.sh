@@ -31,6 +31,7 @@ INTEGRATION_VERIFICATION="$ROOT_DIR/INTEGRATION_VERIFICATION.md"
 INTEGRATION_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-execute-integration-verification.md"
 NONBLANK_API_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-15-001-nonblank-openai-api-key.md"
 EMPTY_MODEL_ALLOWLIST_PLAN="$ROOT_DIR/docs/plans/2026-06-15-empty-model-allowlist.md"
+NONBLANK_MESSAGE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-nonblank-message-content.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -73,6 +74,7 @@ for path in \
   "docs/plans/2026-06-14-make-root-override-protection.md" \
   "docs/plans/2026-06-14-execute-integration-verification.md" \
   "docs/plans/2026-06-15-empty-model-allowlist.md" \
+  "docs/plans/2026-06-15-nonblank-message-content.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -747,6 +749,32 @@ if ! grep -Fq "own request, parameter, and message fields" "$README"; then
   printf '%s\n' "README must document own field validation." >&2
   exit 1
 fi
+
+if ! grep -Fq 'content.trim().length === 0' "$API" ||
+  ! grep -Fq 'for (const blankContent of ["", "   ", "\t\n", "\u00a0", "\ufeff"] as const)' "$PARSER_TEST" ||
+  ! grep -Fq 'content: "  Keep this spacing.  "' "$PARSER_TEST"; then
+  printf '%s\n' "Execute messages must reject whitespace-only content without rewriting accepted text." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Whitespace-only chat message content" "$README" ||
+  ! grep -Fq "Whitespace-only execute message content" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Reject whitespace-only chat message content" "$VISION" ||
+  ! grep -Fq "Rejected whitespace-only execute message content" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the nonblank message-content boundary." >&2
+  exit 1
+fi
+
+for nonblank_message_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "## Verification Completed" \
+  "hostile mutations were rejected"; do
+  if ! grep -Fq "$nonblank_message_contract" "$NONBLANK_MESSAGE_PLAN"; then
+    printf '%s\n' "Nonblank message-content plan must record completed evidence: $nonblank_message_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "check: verify" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Makefile must expose make check as the repository verification wrapper." >&2

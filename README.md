@@ -115,6 +115,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   allows no models instead of reopening those defaults.
 - Submitted chat messages are normalized to `role` and `content` only; message
   metadata fields are rejected instead of silently dropped.
+- Whitespace-only chat message content is rejected before provider eligibility;
+  accepted nonblank content retains its original leading and trailing spacing.
 - Execute API request bodies are limited to the `code` field; extra fields such
   as credentials or metadata are rejected before code parsing.
 - Extracted parameter and message objects preserve prototype-pollution keys as

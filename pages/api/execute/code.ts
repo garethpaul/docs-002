@@ -361,6 +361,7 @@ function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
       !ALLOWED_MESSAGE_ROLES.has(role) ||
       typeof content !== "string" ||
       content.length === 0 ||
+      content.trim().length === 0 ||
       content.length > MAX_MESSAGE_CONTENT_LENGTH
     ) {
       return null;
