@@ -30,6 +30,7 @@ MAKE_ROOT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-make-root-override-protection.md
 INTEGRATION_VERIFICATION="$ROOT_DIR/INTEGRATION_VERIFICATION.md"
 INTEGRATION_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-execute-integration-verification.md"
 NONBLANK_API_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-15-001-nonblank-openai-api-key.md"
+EMPTY_MODEL_ALLOWLIST_PLAN="$ROOT_DIR/docs/plans/2026-06-15-empty-model-allowlist.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -71,6 +72,7 @@ for path in \
   "docs/plans/2026-06-13-provider-eligible-execute-budget.md" \
   "docs/plans/2026-06-14-make-root-override-protection.md" \
   "docs/plans/2026-06-14-execute-integration-verification.md" \
+  "docs/plans/2026-06-15-empty-model-allowlist.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -398,6 +400,31 @@ fi
 
 if ! grep -Fq "defaultAllowedModels.has(model)" "$API"; then
   printf '%s\n' "OPENAI_ALLOWED_MODELS must only narrow the default model allow-list." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'const configuredModelList = process.env.OPENAI_ALLOWED_MODELS;' "$API" || \
+  ! grep -Fq 'if (configuredModelList === undefined)' "$API" || \
+  ! grep -Fq 'return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)))' "$API" || \
+  ! grep -Fq 'for (const emptyConfiguration of ["   ", " , , "])' "$PARSER_TEST"; then
+  printf '%s\n' "Explicit empty model configuration must fail closed with parser coverage." >&2
+  exit 1
+fi
+
+if [ ! -f "$EMPTY_MODEL_ALLOWLIST_PLAN" ] || \
+  ! grep -Fq 'Status: Completed' "$EMPTY_MODEL_ALLOWLIST_PLAN" || \
+  ! grep -Fq 'execute parser tests passed' "$EMPTY_MODEL_ALLOWLIST_PLAN" || \
+  ! grep -Fq 'hostile mutations were rejected' "$EMPTY_MODEL_ALLOWLIST_PLAN" || \
+  ! grep -Fq 'external working directory' "$EMPTY_MODEL_ALLOWLIST_PLAN"; then
+  printf '%s\n' "Empty model allowlist plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ' | grep -Fq 'Explicitly blank or comma-only configuration allows no models' || \
+  ! grep -Fq 'Explicitly empty model allowlists must fail closed' "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq 'Fail closed for explicitly empty model allowlists' "$VISION" || \
+  ! grep -Fq 'Made explicitly empty model allowlists fail closed' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document explicit empty model allowlist behavior." >&2
   exit 1
 fi
 

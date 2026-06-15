@@ -43,6 +43,8 @@ Helpful reports include:
   authentication and rate limiting.
 - Whitespace-only OpenAI API keys must be rejected before execute capacity or
   provider setup.
+- Explicitly empty model allowlists must fail closed; built-in model defaults
+  apply only when `OPENAI_ALLOWED_MODELS` is absent.
 - Ambiguous multi-value Content-Type headers are rejected before request-body
   normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,

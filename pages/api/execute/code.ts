@@ -266,13 +266,15 @@ export function extractParameters(code: string): JsonObject | null {
 
 function allowedModels() {
   const defaultAllowedModels = new Set(DEFAULT_ALLOWED_MODELS);
-  const configuredModels = process.env.OPENAI_ALLOWED_MODELS?.split(",")
-    .map((model) => model.trim())
-    .filter(Boolean);
-
-  if (!configuredModels?.length) {
+  const configuredModelList = process.env.OPENAI_ALLOWED_MODELS;
+  if (configuredModelList === undefined) {
     return defaultAllowedModels;
   }
+
+  const configuredModels = configuredModelList
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
 
   return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)));
 }

@@ -348,6 +348,19 @@ try {
     },
   );
 
+  for (const emptyConfiguration of ["   ", " , , "]) {
+    process.env.OPENAI_ALLOWED_MODELS = emptyConfiguration;
+    assert.equal(
+      parseAndNormalize(`
+        await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: "Hello" }]
+        });
+      `),
+      null,
+    );
+  }
+
   process.env.OPENAI_ALLOWED_MODELS = "not-allowed";
   assert.equal(
     parseAndNormalize(`

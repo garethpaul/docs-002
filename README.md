@@ -111,7 +111,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only
-  accepts the checked-in defaults.
+  accepts the checked-in defaults. Explicitly blank or comma-only configuration
+  allows no models instead of reopening those defaults.
 - Submitted chat messages are normalized to `role` and `content` only; message
   metadata fields are rejected instead of silently dropped.
 - Execute API request bodies are limited to the `code` field; extra fields such

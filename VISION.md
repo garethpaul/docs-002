@@ -50,6 +50,7 @@ Current baseline:
   before provider setup; require shared upstream enforcement for public
   multi-instance deployments.
 - Reject blank OpenAI API keys before execute capacity consumption.
+- Fail closed for explicitly empty model allowlists.
 - Reject ambiguous multi-value content types before execute body parsing.
 - Execute API responses use `Cache-Control: no-store` to avoid intentionally
   caching submitted code, provider output, or errors.

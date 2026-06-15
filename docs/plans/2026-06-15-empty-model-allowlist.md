@@ -1,6 +1,6 @@
 # Explicit Empty Model Allowlist
 
-Status: In Progress
+Status: Completed
 
 ## Problem
 
@@ -48,4 +48,11 @@ instead of failing closed.
 
 ## Verification
 
-- Pending implementation and bounded validation.
+- The test-first parser run failed because whitespace configuration still
+  admitted `gpt-4o-mini`; the execute parser tests passed after the fix.
+- Six hostile mutations were rejected for the unset branch, fallback behavior,
+  focused fixture, README, security guidance, and completed plan evidence.
+- Node 20.19.5 and Node 24.16.0 `make check` passed, including lint, type-check,
+  parser tests, production build, static contracts, and zero-vulnerability
+  moderate audits; Node 20 also passed from an external working directory.
+- This change claims no deployed route or live OpenAI provider execution.

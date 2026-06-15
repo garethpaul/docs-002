@@ -2,6 +2,8 @@
 
 ## 2026-06-15
 
+- Made explicitly empty model allowlists fail closed instead of restoring
+  built-in defaults.
 - Rejected whitespace-only OpenAI API keys before execute capacity consumption.
 
 ## 2026-06-14
