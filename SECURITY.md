@@ -41,6 +41,8 @@ Helpful reports include:
   eligible traffic receives `429` with `Retry-After` before provider setup.
   Public multi-instance deployments still require shared upstream
   authentication and rate limiting.
+- Whitespace-only OpenAI API keys must be rejected before execute capacity or
+  provider setup.
 - Ambiguous multi-value Content-Type headers are rejected before request-body
   normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,

@@ -9,6 +9,7 @@ import executeHandler, {
   extractParameters,
   hasJsonContentType,
   isExecuteApiEnabled,
+  normalizeOpenAIApiKey,
   normalizeExecuteBody,
   normalizeChatRequest,
   OPENAI_REQUEST_OPTIONS,
@@ -51,6 +52,16 @@ assert.equal(Object.isFrozen(OPENAI_REQUEST_OPTIONS), true);
 assert.equal(EXECUTE_CACHE_CONTROL, "no-store");
 assert.equal(EXECUTE_RATE_LIMIT_MAX_REQUESTS, 10);
 assert.equal(EXECUTE_RATE_LIMIT_WINDOW_MS, 60_000);
+const originalApiKey = process.env.OPENAI_API_KEY;
+delete process.env.OPENAI_API_KEY;
+assert.equal(normalizeOpenAIApiKey(), null);
+if (originalApiKey !== undefined) {
+  process.env.OPENAI_API_KEY = originalApiKey;
+}
+assert.equal(normalizeOpenAIApiKey(null), null);
+assert.equal(normalizeOpenAIApiKey(""), null);
+assert.equal(normalizeOpenAIApiKey("   "), null);
+assert.equal(normalizeOpenAIApiKey("  test-api-key  "), "test-api-key");
 
 const consumeCapacity = createFixedWindowRateLimiter(
   EXECUTE_RATE_LIMIT_MAX_REQUESTS,
@@ -109,11 +120,36 @@ try {
   assert.deepEqual(invalidContentTypeResponse.body, {
     error: "Request content type must be application/json",
   });
+
+  process.env.OPENAI_API_KEY = "   ";
+  const blankApiKeyResponse = createTestResponse();
+  void executeHandler(
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: {
+        code: `await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: "Hello" }]
+        });`,
+      },
+    } as NextApiRequest,
+    blankApiKeyResponse as unknown as NextApiResponse,
+  );
+  assert.equal(blankApiKeyResponse.statusCode, 503);
+  assert.deepEqual(blankApiKeyResponse.body, {
+    error: "OPENAI_API_KEY is not configured",
+  });
 } finally {
   if (originalExecuteEnabled === undefined) {
     delete process.env.DOCS_EXECUTE_ENABLED;
   } else {
     process.env.DOCS_EXECUTE_ENABLED = originalExecuteEnabled;
+  }
+  if (originalApiKey === undefined) {
+    delete process.env.OPENAI_API_KEY;
+  } else {
+    process.env.OPENAI_API_KEY = originalApiKey;
   }
 }
 

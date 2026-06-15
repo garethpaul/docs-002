@@ -291,6 +291,14 @@ export function isExecuteApiEnabled(value = process.env.DOCS_EXECUTE_ENABLED): b
   return typeof value === "string" && value.trim().toLowerCase() === "true";
 }
 
+export function normalizeOpenAIApiKey(value: unknown = process.env.OPENAI_API_KEY) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
 export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return null;
@@ -506,7 +514,8 @@ export default async function handler(
     });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = normalizeOpenAIApiKey();
+  if (!apiKey) {
     return res.status(503).json({ error: "OPENAI_API_KEY is not configured" });
   }
 
@@ -515,7 +524,7 @@ export default async function handler(
   }
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create(
       params as ChatCompletionCreateParamsNonStreaming,
       OPENAI_REQUEST_OPTIONS,

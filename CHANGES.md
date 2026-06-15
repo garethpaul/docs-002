@@ -1,5 +1,9 @@
 # Changes
 
+## 2026-06-15
+
+- Rejected whitespace-only OpenAI API keys before execute capacity consumption.
+
 ## 2026-06-14
 
 - Added an exact-head execute integration verification matrix that separates
