@@ -117,6 +117,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   metadata fields are rejected instead of silently dropped.
 - Whitespace-only chat message content is rejected before provider eligibility;
   accepted nonblank content retains its original leading and trailing spacing.
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
 - Execute API request bodies are limited to the `code` field; extra fields such
   as credentials or metadata are rejected before code parsing.
 - Extracted parameter and message objects preserve prototype-pollution keys as

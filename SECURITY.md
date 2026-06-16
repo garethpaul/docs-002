@@ -47,6 +47,7 @@ Helpful reports include:
   apply only when `OPENAI_ALLOWED_MODELS` is absent.
 - Whitespace-only execute message content must be rejected before consuming
   provider capacity, without rewriting accepted nonblank content.
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
 - Ambiguous multi-value Content-Type headers are rejected before request-body
   normalization, including arrays where one value names JSON.
 - Execute API responses set `Cache-Control: no-store` so submitted code,

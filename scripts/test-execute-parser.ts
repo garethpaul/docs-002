@@ -140,6 +140,26 @@ try {
   assert.deepEqual(blankApiKeyResponse.body, {
     error: "OPENAI_API_KEY is not configured",
   });
+
+  process.env.OPENAI_API_KEY = "test-api-key";
+  const malformedUnicodeResponse = createTestResponse();
+  void executeHandler(
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: {
+        code: `await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: "Broken \\ud800" }]
+        });`,
+      },
+    } as NextApiRequest,
+    malformedUnicodeResponse as unknown as NextApiResponse,
+  );
+  assert.equal(malformedUnicodeResponse.statusCode, 400);
+  assert.deepEqual(malformedUnicodeResponse.body, {
+    error: "Code must contain a literal, allowed openai.chat.completions.create request",
+  });
 } finally {
   if (originalExecuteEnabled === undefined) {
     delete process.env.DOCS_EXECUTE_ENABLED;
@@ -255,6 +275,32 @@ for (const blankContent of ["", "   ", "\t\n", "\u00a0", "\ufeff"] as const) {
     null,
   );
 }
+
+for (const malformedContent of [
+  "Broken \ud800 text",
+  "Broken \udfff text",
+  "Broken \ud800",
+] as const) {
+  assert.equal(
+    normalizeChatRequest({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: malformedContent }],
+    }),
+    null,
+  );
+}
+
+assert.deepEqual(
+  normalizeChatRequest({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Launch \ud83d\ude80" }],
+  }),
+  {
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Launch \ud83d\ude80" }],
+    max_tokens: 512,
+  },
+);
 
 assert.equal(
   normalizeChatRequest({

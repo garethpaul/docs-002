@@ -36,6 +36,7 @@ Current baseline:
 - Chat messages may only include `role` and `content` so metadata is not
   accepted and then silently dropped.
 - Reject whitespace-only chat message content before provider eligibility.
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
 - Execute request, parameter, and message normalization requires own fields
   before reading accepted values.
 - Extracted literal objects preserve prototype keys as own fields before

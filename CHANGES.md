@@ -2,6 +2,7 @@
 
 ## 2026-06-15
 
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
 - Rejected whitespace-only execute message content before provider capacity
   consumption while preserving accepted content unchanged.
 - Made explicitly empty model allowlists fail closed instead of restoring

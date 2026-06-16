@@ -1,6 +1,6 @@
 # Execute Message Unicode Integrity
 
-## Status: In Progress
+## Status: Completed
 
 ## Context
 
@@ -36,6 +36,19 @@ use paired surrogates and must remain accepted.
 - `git diff --check`
 - Exact-path, generated-artifact, sensitive-value, conflict-marker, and
   file-mode audits
+
+## Verification Completed
+
+- `sh -n scripts/check-baseline.sh` passed.
+- `npm run test:parser` passed under Node.js 20.19.5.
+- Six isolated Unicode-integrity mutations were rejected: removing the
+  well-formedness predicate, trailing-high-surrogate guard,
+  malformed-surrogate fixture, valid-pair fixture, guidance, or completed-plan
+  status each failed the baseline gate.
+- Repository-root and external-directory `make check` both passed, covering
+  lint, TypeScript, parser tests, production build, baseline contracts, and an
+  `npm audit --audit-level=moderate` result with zero vulnerabilities.
+- No live OpenAI request or deployed execute route was exercised.
 
 ## Risks
 

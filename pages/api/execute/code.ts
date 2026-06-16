@@ -333,6 +333,27 @@ function numberInRange(
   return value;
 }
 
+function hasWellFormedUtf16(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (
+        index + 1 >= value.length ||
+        nextCodeUnit < 0xdc00 ||
+        nextCodeUnit > 0xdfff
+      ) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MESSAGES) {
     return null;
@@ -362,6 +383,7 @@ function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
       typeof content !== "string" ||
       content.length === 0 ||
       content.trim().length === 0 ||
+      !hasWellFormedUtf16(content) ||
       content.length > MAX_MESSAGE_CONTENT_LENGTH
     ) {
       return null;
