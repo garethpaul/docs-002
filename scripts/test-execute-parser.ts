@@ -302,6 +302,40 @@ assert.deepEqual(
   },
 );
 
+for (const malformedStop of ["\ud800", "Broken \udfff stop", "Broken \ud800"] as const) {
+  assert.equal(
+    normalizeChatRequest({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Hello" }],
+      stop: malformedStop,
+    }),
+    null,
+  );
+}
+
+assert.equal(
+  normalizeChatRequest({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Hello" }],
+    stop: ["END", "Broken \ud800 stop"],
+  }),
+  null,
+);
+
+assert.deepEqual(
+  normalizeChatRequest({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Hello" }],
+    stop: [" \t ", "Launch \ud83d\ude80"],
+  }),
+  {
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Hello" }],
+    max_tokens: 512,
+    stop: [" \t ", "Launch \ud83d\ude80"],
+  },
+);
+
 assert.equal(
   normalizeChatRequest({
     model: "gpt-4o-mini",

@@ -404,14 +404,25 @@ function normalizeStop(value: JsonValue | undefined) {
   if (value === undefined) {
     return undefined;
   }
-  if (typeof value === "string" && value.length > 0 && value.length <= 100) {
+  if (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 100 &&
+    hasWellFormedUtf16(value)
+  ) {
     return value;
   }
   if (
     Array.isArray(value) &&
     value.length > 0 &&
     value.length <= 4 &&
-    value.every((entry) => typeof entry === "string" && entry.length > 0 && entry.length <= 100)
+    value.every(
+      (entry) =>
+        typeof entry === "string" &&
+        entry.length > 0 &&
+        entry.length <= 100 &&
+        hasWellFormedUtf16(entry),
+    )
   ) {
     return value as string[];
   }

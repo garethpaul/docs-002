@@ -1,6 +1,6 @@
 # Execute Stop Unicode Integrity
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -45,3 +45,16 @@ remain supported.
 
 - Message validation, model selection, authentication, shared rate limiting,
   provider retry policy, UI changes, and dependency upgrades.
+
+## Verification Completed
+
+- `sh -n scripts/check-baseline.sh` and `npm run test:parser` passed under
+  Node.js 20.19.5.
+- Seven isolated stop-Unicode mutations were rejected: removing scalar or
+  array validation, malformed scalar or array fixtures, valid-pair
+  preservation, maintained guidance, or completed-plan status failed the
+  baseline gate.
+- Repository-root and external-directory `make check` passed lint, TypeScript,
+  parser tests, Next.js production builds, static contracts, and
+  `npm audit --audit-level=moderate` with zero vulnerabilities.
+- No live OpenAI request or deployed execute route was exercised.

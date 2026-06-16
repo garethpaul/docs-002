@@ -33,6 +33,7 @@ NONBLANK_API_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-15-001-nonblank-openai-api-k
 EMPTY_MODEL_ALLOWLIST_PLAN="$ROOT_DIR/docs/plans/2026-06-15-empty-model-allowlist.md"
 NONBLANK_MESSAGE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-nonblank-message-content.md"
 MESSAGE_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-message-unicode-integrity.md"
+STOP_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-stop-unicode-integrity.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -77,6 +78,7 @@ for path in \
   "docs/plans/2026-06-15-empty-model-allowlist.md" \
   "docs/plans/2026-06-15-nonblank-message-content.md" \
   "docs/plans/2026-06-16-execute-message-unicode-integrity.md" \
+  "docs/plans/2026-06-16-execute-stop-unicode-integrity.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -813,6 +815,39 @@ for message_unicode_contract in \
   "No live OpenAI request or deployed execute route"; do
   if ! grep -Fq "$message_unicode_contract" "$MESSAGE_UNICODE_PLAN"; then
     printf '%s\n' "Message Unicode-integrity plan must record completed evidence: $message_unicode_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc 'hasWellFormedUtf16(value)' "$API")" -ne 1 ] ||
+  [ "$(grep -Fc 'hasWellFormedUtf16(entry)' "$API")" -ne 1 ]; then
+  printf '%s\n' "Scalar and array execute stop sequences must reject lone UTF-16 surrogates." >&2
+  exit 1
+fi
+
+malformed_stop_fixture='for (const malformedStop of ["\ud800", "Broken \udfff stop", "Broken \ud800"] as const)'
+if [ "$(grep -Fc "$malformed_stop_fixture" "$PARSER_TEST")" -ne 1 ] ||
+  [ "$(grep -Fc 'stop: ["END", "Broken \ud800 stop"]' "$PARSER_TEST")" -ne 1 ] ||
+  [ "$(grep -Fc 'stop: [" \t ", "Launch \ud83d\ude80"]' "$PARSER_TEST")" -ne 2 ]; then
+  printf '%s\n' "Execute parser tests must cover malformed scalar/array stops and preserve valid stop Unicode unchanged." >&2
+  exit 1
+fi
+
+stop_unicode_guidance='Lone UTF-16 surrogates in execute stop sequences are rejected; valid surrogate pairs and whitespace sequences remain accepted unchanged.'
+for guidance_file in "$README" "$ROOT_DIR/SECURITY.md" "$VISION" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "$stop_unicode_guidance" "$guidance_file"; then
+    printf '%s\n' "Project guidance must document the execute stop Unicode boundary." >&2
+    exit 1
+  fi
+done
+
+for stop_unicode_contract in \
+  "## Status: Completed" \
+  "make check" \
+  "isolated stop-Unicode mutations were rejected" \
+  "No live OpenAI request or deployed execute route"; do
+  if ! grep -Fq "$stop_unicode_contract" "$STOP_UNICODE_PLAN"; then
+    printf '%s\n' "Stop Unicode-integrity plan must record completed evidence: $stop_unicode_contract" >&2
     exit 1
   fi
 done
