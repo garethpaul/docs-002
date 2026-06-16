@@ -54,6 +54,7 @@ const ALLOWED_PARAMETER_NAMES = new Set([
   "response_format",
 ]);
 const DEFAULT_ALLOWED_MODELS = ["gpt-3.5-turbo", "gpt-4o-mini"];
+const HTTP_TOKEN_CHARACTER = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]$/;
 
 export const config = {
   api: {
@@ -279,14 +280,126 @@ function allowedModels() {
   return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)));
 }
 
+function isHttpTokenCharacter(character: string) {
+  return HTTP_TOKEN_CHARACTER.test(character);
+}
+
+function skipHttpWhitespace(value: string, start: number) {
+  let index = start;
+  while (value[index] === " " || value[index] === "\t") {
+    index += 1;
+  }
+  return index;
+}
+
+function readHttpToken(value: string, start: number): [string, number] | null {
+  let index = start;
+  while (index < value.length && isHttpTokenCharacter(value[index])) {
+    index += 1;
+  }
+  return index === start ? null : [value.slice(start, index), index];
+}
+
+function readHttpQuotedString(value: string, start: number): [string, number] | null {
+  if (value[start] !== '"') {
+    return null;
+  }
+
+  let decoded = "";
+  for (let index = start + 1; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === '"') {
+      return [decoded, index + 1];
+    }
+
+    if (character === "\\") {
+      index += 1;
+      if (index >= value.length) {
+        return null;
+      }
+      const escaped = value[index];
+      const escapedCode = escaped.charCodeAt(0);
+      if (escapedCode < 0x20 || escapedCode > 0x7e) {
+        return null;
+      }
+      decoded += escaped;
+      continue;
+    }
+
+    const characterCode = character.charCodeAt(0);
+    if (characterCode < 0x20 || characterCode === 0x7f) {
+      return null;
+    }
+    decoded += character;
+  }
+
+  return null;
+}
+
 export function hasJsonContentType(contentType: HeaderValue): boolean {
   if (typeof contentType !== "string") {
     return false;
   }
 
-  return (
-    contentType.split(";")[0].trim().toLowerCase() === "application/json"
-  );
+  let index = skipHttpWhitespace(contentType, 0);
+  const type = readHttpToken(contentType, index);
+  if (!type || type[0].toLowerCase() !== "application") {
+    return false;
+  }
+
+  index = type[1];
+  if (contentType[index] !== "/") {
+    return false;
+  }
+
+  const subtype = readHttpToken(contentType, index + 1);
+  if (!subtype || subtype[0].toLowerCase() !== "json") {
+    return false;
+  }
+
+  index = skipHttpWhitespace(contentType, subtype[1]);
+  if (index === contentType.length) {
+    return true;
+  }
+
+  let charsetSeen = false;
+  while (index < contentType.length) {
+    if (contentType[index] !== ";") {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, index + 1);
+    const parameterName = readHttpToken(contentType, index);
+    if (!parameterName) {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, parameterName[1]);
+    if (contentType[index] !== "=") {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, index + 1);
+    const parameterValue =
+      contentType[index] === '"'
+        ? readHttpQuotedString(contentType, index)
+        : readHttpToken(contentType, index);
+    if (!parameterValue) {
+      return false;
+    }
+
+    if (
+      charsetSeen ||
+      parameterName[0].toLowerCase() !== "charset" ||
+      parameterValue[0].toLowerCase() !== "utf-8"
+    ) {
+      return false;
+    }
+    charsetSeen = true;
+    index = skipHttpWhitespace(contentType, parameterValue[1]);
+  }
+
+  return charsetSeen;
 }
 
 export function isExecuteApiEnabled(value = process.env.DOCS_EXECUTE_ENABLED): boolean {

@@ -121,6 +121,20 @@ try {
     error: "Request content type must be application/json",
   });
 
+  const invalidParameterizedContentTypeResponse = createTestResponse();
+  void executeHandler(
+    {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=latin1" },
+      body: { code: "const invalid = true;" },
+    } as NextApiRequest,
+    invalidParameterizedContentTypeResponse as unknown as NextApiResponse,
+  );
+  assert.equal(invalidParameterizedContentTypeResponse.statusCode, 415);
+  assert.deepEqual(invalidParameterizedContentTypeResponse.body, {
+    error: "Request content type must be application/json",
+  });
+
   process.env.OPENAI_API_KEY = "   ";
   const blankApiKeyResponse = createTestResponse();
   void executeHandler(
@@ -208,6 +222,22 @@ assert.equal(parseAndNormalize("const value = 1;"), null);
 
 assert.equal(hasJsonContentType("application/json"), true);
 assert.equal(hasJsonContentType("Application/JSON; charset=utf-8"), true);
+assert.equal(hasJsonContentType(' application/json ; Charset = "UTF-8" '), true);
+assert.equal(hasJsonContentType('application/json; charset="utf\\-8"'), true);
+for (const invalidContentType of [
+  "application/json;",
+  "application/json; charset",
+  "application/json; charset=",
+  'application/json; charset="',
+  'application/json; charset="utf-8',
+  "application/json; charset=latin1",
+  "application/json; charset=utf-8; charset=utf-8",
+  "application/json; profile=test",
+  'application/json; charset="utf\\\u0001-8"',
+  "application/json, text/plain",
+] as const) {
+  assert.equal(hasJsonContentType(invalidContentType), false);
+}
 assert.equal(hasJsonContentType(["text/plain", "application/json"]), false);
 assert.equal(hasJsonContentType(["application/json", "application/json"]), false);
 assert.equal(hasJsonContentType([]), false);

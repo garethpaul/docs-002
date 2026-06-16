@@ -82,6 +82,9 @@ regression tests, the Next build, the source baseline guard, and
 `DOCS_EXECUTE_ENABLED=true` and requires `OPENAI_API_KEY` at runtime. It accepts
 `Content-Type: application/json` requests only, rejects multi-value Content-Type
 headers, and validates submitted examples before calling the OpenAI SDK.
+Execute JSON Content-Type parameters accept only one UTF-8 charset declaration;
+malformed, duplicate, unsupported, and unrelated parameters are rejected before
+body validation.
 Request bodies may only contain a `code` string. Chat message objects may only
 contain `role` and `content`.
 Every execute API response sets `Cache-Control: no-store` so submitted code,

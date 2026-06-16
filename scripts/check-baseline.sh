@@ -34,6 +34,7 @@ EMPTY_MODEL_ALLOWLIST_PLAN="$ROOT_DIR/docs/plans/2026-06-15-empty-model-allowlis
 NONBLANK_MESSAGE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-nonblank-message-content.md"
 MESSAGE_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-message-unicode-integrity.md"
 STOP_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-stop-unicode-integrity.md"
+CONTENT_TYPE_PARAMETER_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-content-type-parameters.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -79,6 +80,7 @@ for path in \
   "docs/plans/2026-06-15-nonblank-message-content.md" \
   "docs/plans/2026-06-16-execute-message-unicode-integrity.md" \
   "docs/plans/2026-06-16-execute-stop-unicode-integrity.md" \
+  "docs/plans/2026-06-16-execute-content-type-parameters.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -848,6 +850,66 @@ for stop_unicode_contract in \
   "No live OpenAI request or deployed execute route"; do
   if ! grep -Fq "$stop_unicode_contract" "$STOP_UNICODE_PLAN"; then
     printf '%s\n' "Stop Unicode-integrity plan must record completed evidence: $stop_unicode_contract" >&2
+    exit 1
+  fi
+done
+
+for content_type_parameter_source_contract in \
+  'function readHttpToken(' \
+  'function readHttpQuotedString(' \
+  'let charsetSeen = false;' \
+  'parameterName[0].toLowerCase() !== "charset"' \
+  'parameterValue[0].toLowerCase() !== "utf-8"'; do
+  if ! grep -Fq "$content_type_parameter_source_contract" "$API"; then
+    printf '%s\n' "Execute Content-Type parameter parsing must keep contract: $content_type_parameter_source_contract" >&2
+    exit 1
+  fi
+done
+
+for content_type_parameter_test_contract in \
+  'application/json ; Charset = "UTF-8"' \
+  'application/json; charset=utf-8; charset=utf-8' \
+  'application/json; charset=latin1' \
+  'application/json; profile=test' \
+  'invalidParameterizedContentTypeResponse.statusCode, 415'; do
+  if ! grep -Fq "$content_type_parameter_test_contract" "$PARSER_TEST"; then
+    printf '%s\n' "Execute parser tests must keep Content-Type parameter case: $content_type_parameter_test_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$API" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+handler = source.split("export default async function handler(", 1)[1]
+content_type = 'if (!hasJsonContentType(req.headers["content-type"])) {'
+body = "const body = normalizeExecuteBody(req.body);"
+capacity = "if (enforceExecuteRateLimit(res)) {"
+if not all(token in handler for token in (content_type, body, capacity)):
+    raise SystemExit("Execute handler must retain Content-Type, body, and capacity boundaries.")
+if not handler.index(content_type) < handler.index(body) < handler.index(capacity):
+    raise SystemExit("Execute Content-Type parameters must be rejected before body and capacity checks.")
+PY
+
+for guidance_file in "$README" "$ROOT_DIR/SECURITY.md" "$VISION" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq 'Execute JSON Content-Type parameters accept only one UTF-8 charset declaration' "$guidance_file" ||
+    ! grep -Fq 'malformed, duplicate, unsupported, and unrelated parameters are rejected before' "$guidance_file"; then
+    printf '%s\n' "Project guidance must document execute Content-Type parameter validation." >&2
+    exit 1
+  fi
+done
+
+for content_type_parameter_plan_contract in \
+  "## Status: Completed" \
+  "all focused parser tests" \
+  "ESLint and TypeScript passed" \
+  "reported zero vulnerabilities" \
+  "Repository and external-directory \`make check\`" \
+  "Eight isolated Content-Type mutations were rejected"; do
+  if ! grep -Fq "$content_type_parameter_plan_contract" "$CONTENT_TYPE_PARAMETER_PLAN"; then
+    printf '%s\n' "Content-Type parameter plan must record completed evidence: $content_type_parameter_plan_contract" >&2
     exit 1
   fi
 done

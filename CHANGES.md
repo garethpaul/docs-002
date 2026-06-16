@@ -1,5 +1,9 @@
 # Changes
 
+## 2026-06-16
+
+- Execute JSON Content-Type parameters accept only one UTF-8 charset declaration; malformed, duplicate, unsupported, and unrelated parameters are rejected before body validation.
+
 ## 2026-06-15
 
 - Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.

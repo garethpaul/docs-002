@@ -1,6 +1,6 @@
 # Validate Execute Content-Type Parameters
 
-## Status: Planned
+## Status: Completed
 
 ## Problem
 
@@ -25,7 +25,7 @@ Primary references:
 ## Priorities
 
 1. P0: Reject malformed or contradictory JSON media-type parameters before
-   request-body parsing and provider eligibility.
+   route-level body normalization and provider eligibility.
 2. P1: Preserve bare `application/json` and one case-insensitive UTF-8 charset
    value in token or quoted-string form.
 3. P1: Add mutation-sensitive parser, route-ordering, guidance, and completion
@@ -73,8 +73,8 @@ guidance, and completed verification evidence in the dependency-free checker.
 
 ## Validation
 
-- Run shell syntax, focused parser tests, TypeScript, ESLint, Prettier, the
-  production build, npm audit, and repository/external `make check`.
+- Run shell syntax, focused parser tests, TypeScript, ESLint, the production
+  build, npm audit, and repository/external `make check`.
 - Reject isolated mutations that restore prefix-only acceptance, weaken
   duplicate/charset/syntax checks, remove the route-ordering assertion,
   remove guidance, or reopen plan status.
@@ -90,3 +90,30 @@ guidance, and completed verification evidence in the dependency-free checker.
 - No live OpenAI request, deployed route, proxy normalization, or malformed raw
   HTTP transport is exercised.
 - This change is stacked on PR #16, which must remain open and merge first.
+
+## Work Completed
+
+- Replaced prefix-only media-type matching with dependency-free HTTP token and
+  quoted-string parsing for the execute request boundary.
+- Preserved bare JSON and one UTF-8 charset declaration while rejecting
+  malformed, duplicate, unsupported, and unrelated parameters.
+- Added direct parser cases, a saturated-capacity route-ordering regression,
+  static contracts, and synchronized maintenance guidance.
+
+## Verification Completed
+
+- The focused regression first reproduced the defect as a `400` body error for
+  an unsupported charset, then all focused parser tests passed with the route
+  returning the existing `415` response before body validation.
+- ESLint and TypeScript passed, and the Next.js 16.2.9 production build
+  completed successfully.
+- `npm audit --audit-level=moderate` reported zero vulnerabilities in the
+  exact installed lockfile graph.
+- Repository and external-directory `make check` passed the complete package
+  gate with explicit timeouts.
+- Eight isolated Content-Type mutations were rejected: restoring prefix-only
+  matching, weakening duplicate, charset, or parameter-name enforcement,
+  removing quoted UTF-8 support, changing the route-ordering regression,
+  deleting maintained guidance, and reopening plan status.
+- Exact diff, generated-artifact, untracked-file, credential-shaped addition,
+  conflict-marker, binary, file-mode, and whitespace audits passed.

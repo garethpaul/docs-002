@@ -38,6 +38,7 @@ Current baseline:
 - Reject whitespace-only chat message content before provider eligibility.
 - Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
 - Lone UTF-16 surrogates in execute stop sequences are rejected; valid surrogate pairs and whitespace sequences remain accepted unchanged.
+- Execute JSON Content-Type parameters accept only one UTF-8 charset declaration; malformed, duplicate, unsupported, and unrelated parameters are rejected before body validation.
 - Execute request, parameter, and message normalization requires own fields
   before reading accepted values.
 - Extracted literal objects preserve prototype keys as own fields before
