@@ -907,7 +907,10 @@ for content_type_parameter_plan_contract in \
   "ESLint and TypeScript passed" \
   "reported zero vulnerabilities" \
   "Repository and external-directory \`make check\`" \
-  "Eight isolated Content-Type mutations were rejected"; do
+  "Eight isolated Content-Type mutations were rejected" \
+  "b8de6991a8ee03d0fc3d57ed67eb8e910cb4b8c9" \
+  'push run `27624231788`' \
+  'pull-request run `27624249230`'; do
   if ! grep -Fq "$content_type_parameter_plan_contract" "$CONTENT_TYPE_PARAMETER_PLAN"; then
     printf '%s\n' "Content-Type parameter plan must record completed evidence: $content_type_parameter_plan_contract" >&2
     exit 1

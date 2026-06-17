@@ -117,3 +117,10 @@ guidance, and completed verification evidence in the dependency-free checker.
   deleting maintained guidance, and reopening plan status.
 - Exact diff, generated-artifact, untracked-file, credential-shaped addition,
   conflict-marker, binary, file-mode, and whitespace audits passed.
+- The implementation was committed as
+  `b8de6991a8ee03d0fc3d57ed67eb8e910cb4b8c9`.
+- Canonical hosted verification passed on that exact implementation head:
+  push run `27624231788` and pull-request run `27624249230` each completed
+  successfully across Node.js 20, 22, and 24. Both Vercel checks also passed,
+  PR #17 remained open, clean, and mergeable, and the branch had no open
+  code-scanning alerts.
