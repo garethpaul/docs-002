@@ -3,6 +3,7 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PACKAGE_JSON="$ROOT_DIR/package.json"
+PACKAGE_LOCK="$ROOT_DIR/package-lock.json"
 API="$ROOT_DIR/pages/api/execute/code.ts"
 EDITOR="$ROOT_DIR/components/Editor.tsx"
 PARSER_TEST="$ROOT_DIR/scripts/test-execute-parser.ts"
@@ -35,6 +36,7 @@ NONBLANK_MESSAGE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-nonblank-message-content.
 MESSAGE_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-message-unicode-integrity.md"
 STOP_UNICODE_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-stop-unicode-integrity.md"
 CONTENT_TYPE_PARAMETER_PLAN="$ROOT_DIR/docs/plans/2026-06-16-execute-content-type-parameters.md"
+DEPENDENCY_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-18-compatible-dependency-refresh.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 MAKEFILE="$ROOT_DIR/Makefile"
 
@@ -81,6 +83,7 @@ for path in \
   "docs/plans/2026-06-16-execute-message-unicode-integrity.md" \
   "docs/plans/2026-06-16-execute-stop-unicode-integrity.md" \
   "docs/plans/2026-06-16-execute-content-type-parameters.md" \
+  "docs/plans/2026-06-18-compatible-dependency-refresh.md" \
   "scripts/test-execute-parser.ts" \
   "scripts/check-baseline.sh"; do
   require_file "$path"
@@ -196,14 +199,34 @@ if ! awk '
   exit 1
 fi
 
-if ! node -e '
-  const lock = require(process.argv[1]);
-  const entry = lock.packages && lock.packages["node_modules/esbuild"];
-  if (!entry || entry.version !== "0.28.1" ||
-      entry.resolved !== "https://registry.npmjs.org/esbuild/-/esbuild-0.28.1.tgz" ||
-      typeof entry.integrity !== "string" || !entry.integrity.startsWith("sha512-")) process.exit(1);
-' "$ROOT_DIR/package-lock.json"; then
-  printf '%s\n' "The lockfile must retain the reviewed esbuild 0.28.1 resolution and integrity." >&2
+if ! node - "$PACKAGE_JSON" "$PACKAGE_LOCK" <<'NODE'
+const fs = require("fs");
+const pkg = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const lock = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+const reviewed = {
+  "@codemirror/search": "6.7.1",
+  "@radix-ui/react-menubar": "1.1.18",
+  "@radix-ui/react-navigation-menu": "1.2.16",
+  eslint: "10.5.0",
+  openai: "6.44.0",
+  "typescript-eslint": "8.61.1",
+};
+for (const [name, version] of Object.entries(reviewed)) {
+  const declared = pkg.dependencies?.[name] ?? pkg.devDependencies?.[name];
+  const resolved = lock.packages?.[`node_modules/${name}`]?.version;
+  if (declared !== version || resolved !== version) {
+    throw new Error(`${name} must be declared and resolved at ${version}`);
+  }
+}
+const esbuild = lock.packages?.["node_modules/esbuild"];
+if (!esbuild || esbuild.version !== "0.28.1" ||
+    esbuild.resolved !== "https://registry.npmjs.org/esbuild/-/esbuild-0.28.1.tgz" ||
+    typeof esbuild.integrity !== "string" || !esbuild.integrity.startsWith("sha512-")) {
+  throw new Error("esbuild must retain the reviewed 0.28.1 resolution and integrity");
+}
+NODE
+then
+  printf '%s\n' "The manifest and lockfile must retain reviewed dependency and esbuild resolutions." >&2
   exit 1
 fi
 
@@ -267,7 +290,7 @@ if (!pkg.overrides || pkg.overrides.postcss !== "8.5.10") {
 }
 for (const [name, version] of Object.entries({
   next: "16.2.9",
-  openai: "6.42.0",
+  openai: "6.44.0",
   react: "19.2.7",
   "react-dom": "19.2.7",
   "@codemirror/lint": "6.9.7",
@@ -283,6 +306,20 @@ if (!pkg.devDependencies || !pkg.devDependencies.eslint || !pkg.devDependencies[
   throw new Error("package.json must include ESLint dependencies");
 }
 NODE
+
+for dependency_plan_contract in \
+  "## Status: Completed" \
+  "## Work Completed" \
+  "## Verification Completed" \
+  "\`@codemirror/search\` to 6.7.1" \
+  "OpenAI to 6.44.0" \
+  "TypeScript 6 and @types/node 25 remain intentionally deferred" \
+  "Ten isolated dependency-contract mutations were rejected"; do
+  if ! grep -Fq "$dependency_plan_contract" "$DEPENDENCY_REFRESH_PLAN"; then
+    printf '%s\n' "Dependency refresh plan must record completed evidence: $dependency_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if grep -Fq "code.match(" "$API" || grep -Fq "JSON.parse(formattedStr)" "$API"; then
   printf '%s\n' "execute API must not parse OpenAI calls with regex/string JSON munging." >&2

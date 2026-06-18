@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-18
+
+- Refreshed six compatible direct dependencies while preserving Node 20,
+  TypeScript 5.9, the patched esbuild resolution, and the complete production
+  verification gate.
+
 ## 2026-06-16
 
 - Execute JSON Content-Type parameters accept only one UTF-8 charset declaration; malformed, duplicate, unsupported, and unrelated parameters are rejected before body validation.

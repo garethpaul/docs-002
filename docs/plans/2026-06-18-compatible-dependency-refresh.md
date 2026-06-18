@@ -1,6 +1,6 @@
 # Refresh Compatible JavaScript Dependencies
 
-## Status: Planned
+## Status: Completed
 
 ## Problem
 
@@ -46,18 +46,20 @@ does not reintroduce the default-branch esbuild advisory.
 
 ### U2: Protect the dependency boundary
 
-**Files:** `scripts/check-baseline.sh`, this plan
+**Files:** `scripts/check-baseline.sh`, `CHANGES.md`, this plan
 
 Add mutation-sensitive static checks for all six exact pins, the patched esbuild
-resolution, and truthful completed verification evidence.
+resolution, maintained change history, and truthful completed verification
+evidence.
 
 ## Validation
 
 - Run shell syntax, parser tests, TypeScript, zero-warning ESLint, the Next.js
   production build, npm audit, and repository/external `make check`.
 - Run the full gate on available Node 20, 22, and 24 runtimes.
-- Reject isolated mutations to each direct package pin, the esbuild lockfile
-  resolution, the static contract, plan status, and verification evidence.
+- Reject isolated mutations to each direct package pin, one reviewed direct
+  lockfile resolution, the esbuild lockfile resolution, plan status, and
+  verification evidence.
 - Audit the exact diff, generated artifacts, untracked files, credentials,
   conflict markers, binaries, file modes, and whitespace before committing.
 
@@ -70,3 +72,33 @@ resolution, and truthful completed verification evidence.
 - TypeScript 6 and `@types/node` 25 remain intentionally deferred because they
   cross compiler or supported-runtime boundaries.
 - This change is stacked on PR #17, which must remain open and merge first.
+
+## Work Completed
+
+- Updated `@codemirror/search` to 6.7.1, both reviewed Radix components to their
+  compatible releases, OpenAI to 6.44.0, ESLint to 10.5.0, and
+  `typescript-eslint` to 8.61.1.
+- Regenerated the npm lockfile through the structured resolver and retained the
+  patched esbuild 0.28.1 resolution with an integrity digest.
+- Added structured manifest/lockfile contracts for all six reviewed versions,
+  synchronized the change history, and kept the existing audit gate.
+- TypeScript 6 and @types/node 25 remain intentionally deferred because they
+  cross compiler and supported-runtime boundaries.
+
+## Verification Completed
+
+- Node.js 20.19.5, 22.22.2, and 24.16.0 each passed zero-warning ESLint,
+  TypeScript type-checking, execute parser tests, and the Next.js 16.2.9
+  production build.
+- Fresh lockfile installs and `npm audit --audit-level=moderate` reported zero
+  vulnerabilities on all three available Node runtimes.
+- Repository and external-directory `make check` passed the complete package
+  gate with explicit timeouts.
+- Ten isolated dependency-contract mutations were rejected: each of the six
+  direct package pins, a reviewed direct lockfile resolution, the esbuild
+  lockfile resolution, plan status, and verification evidence.
+- Exact diff, generated-artifact, untracked-file, credential-shaped addition,
+  conflict-marker, binary, file-mode, and whitespace audits passed before
+  commit.
+- No live OpenAI request, deployed route, proxy, or browser execution was
+  performed.
