@@ -744,7 +744,7 @@ for auth_contract in \
   fi
 done
 
-if grep -Fq 'createHash(' "$API" ||
+if grep -Fq 'createHash' "$API" ||
   ! grep -Fq 'Buffer.from(providedToken, "utf8")' "$API" ||
   ! grep -Fq 'Buffer.from(expectedToken, "utf8")' "$API"; then
   printf '%s\n' "Execute bearer authentication must compare token bytes without fast password hashing." >&2
