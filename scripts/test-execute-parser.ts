@@ -7,6 +7,7 @@ import executeHandler, {
   EXECUTE_RATE_LIMIT_MAX_REQUESTS,
   EXECUTE_RATE_LIMIT_WINDOW_MS,
   extractParameters,
+  hasValidExecuteAuthorization,
   hasJsonContentType,
   isExecuteApiEnabled,
   normalizeOpenAIApiKey,
@@ -62,6 +63,12 @@ assert.equal(normalizeOpenAIApiKey(null), null);
 assert.equal(normalizeOpenAIApiKey(""), null);
 assert.equal(normalizeOpenAIApiKey("   "), null);
 assert.equal(normalizeOpenAIApiKey("  test-api-key  "), "test-api-key");
+
+assert.equal(hasValidExecuteAuthorization("Bearer exact-token", "exact-token"), true);
+assert.equal(hasValidExecuteAuthorization("Bearer wrong-token", "exact-token"), false);
+assert.equal(hasValidExecuteAuthorization("Bearer token", "longer-token"), false);
+assert.equal(hasValidExecuteAuthorization("Bearer påss-token", "påss-token"), true);
+assert.equal(hasValidExecuteAuthorization("Bearer pass-token", "påss-token"), false);
 
 const originalExecuteToken = process.env.EXECUTE_API_TOKEN;
 const originalExecuteEnabledForAuth = process.env.DOCS_EXECUTE_ENABLED;

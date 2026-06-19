@@ -744,6 +744,13 @@ for auth_contract in \
   fi
 done
 
+if grep -Fq 'createHash(' "$API" ||
+  ! grep -Fq 'Buffer.from(providedToken, "utf8")' "$API" ||
+  ! grep -Fq 'Buffer.from(expectedToken, "utf8")' "$API"; then
+  printf '%s\n' "Execute bearer authentication must compare token bytes without fast password hashing." >&2
+  exit 1
+fi
+
 for auth_test_contract in \
   'Execute API authentication is not configured' \
   'Bearer wrong-token' \

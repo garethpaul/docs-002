@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 import type {
@@ -432,9 +432,12 @@ function bearerToken(value: HeaderValue) {
 }
 
 function safeTokenEqual(providedToken: string, expectedToken: string) {
-  const providedDigest = createHash("sha256").update(providedToken).digest();
-  const expectedDigest = createHash("sha256").update(expectedToken).digest();
-  return timingSafeEqual(providedDigest, expectedDigest);
+  const providedBytes = Buffer.from(providedToken, "utf8");
+  const expectedBytes = Buffer.from(expectedToken, "utf8");
+  return (
+    providedBytes.length === expectedBytes.length &&
+    timingSafeEqual(providedBytes, expectedBytes)
+  );
 }
 
 export function hasValidExecuteAuthorization(
