@@ -1,0 +1,10 @@
+name: Evil
+on: [push]
+jobs:
+  evil:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+      - run: git push

@@ -22,6 +22,7 @@ EXECUTE_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-10-execute-api-enable-gate.md"
 REQUEST_TIMEOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-12-openai-request-timeout.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+CHECKOUT_WORKFLOW_VALIDATOR="$ROOT_DIR/scripts/validate-checkout-workflows.rb"
 MAKEFILE="$ROOT_DIR/Makefile"
 
 require_file() {
@@ -56,7 +57,8 @@ for path in \
   "docs/plans/2026-06-12-openai-request-timeout.md" \
   "docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md" \
   "scripts/test-execute-parser.ts" \
-  "scripts/check-baseline.sh"; do
+  "scripts/check-baseline.sh" \
+  "scripts/validate-checkout-workflows.rb"; do
   require_file "$path"
 done
 
@@ -74,22 +76,7 @@ if ! grep -Fq "permissions:" "$CI_WORKFLOW" || ! grep -Fq "contents: read" "$CI_
   exit 1
 fi
 
-if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 1 ] ||
-  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 1 ]; then
-  printf '%s\n' "GitHub Actions must use one pinned checkout without persisting credentials." >&2
-  exit 1
-fi
-
-if ! awk '
-  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; next }
-  checkout && /^[[:space:]]+with:[[:space:]]*$/ { options = 1; next }
-  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected = 1; next }
-  checkout && /^[[:space:]]+- / { exit }
-  END { exit protected ? 0 : 1 }
-' "$CI_WORKFLOW"; then
-  printf '%s\n' "Checkout credential persistence must be disabled on the pinned checkout step." >&2
-  exit 1
-fi
+ruby "$CHECKOUT_WORKFLOW_VALIDATOR" "$ROOT_DIR/.github/workflows"
 
 if ! node -e '
   const lock = require(process.argv[1]);
