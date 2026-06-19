@@ -554,6 +554,13 @@ if ! grep -Fq "body: JSON.stringify({ code: codeContent })" "$EDITOR"; then
   exit 1
 fi
 
+if ! grep -Fq 'Authorization: `Bearer ${executeToken.trim()}`' "$EDITOR" ||
+  ! grep -Fq 'type="password"' "$EDITOR" ||
+  ! grep -Fq 'autoComplete="off"' "$EDITOR"; then
+  printf '%s\n' "Editor must send a caller-supplied bearer token without persisting it." >&2
+  exit 1
+fi
+
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
   exit 1
@@ -716,14 +723,45 @@ fi
 if ! grep -Fq "OPENAI_API_KEY" "$README" ||
   ! grep -Fq "OPENAI_ALLOWED_MODELS" "$README" ||
   ! grep -Fq "DOCS_EXECUTE_ENABLED" "$README" ||
+  ! grep -Fq "EXECUTE_API_TOKEN" "$README" ||
   ! grep -Fq "Content-Type: application/json" "$README" ||
   ! grep -Fq "npm test" "$README" ||
   ! grep -Fq "make check" "$README" ||
   ! grep -Fq "GitHub Actions" "$README" ||
   ! grep -Fq "docs/plans/2026-06-10-ci-baseline.md" "$README"; then
-  printf '%s\n' "README must document API key, model allow-list, JSON content type, npm test, and make check." >&2
+  printf '%s\n' "README must document API key, execute token, model allow-list, JSON content type, npm test, and make check." >&2
   exit 1
 fi
+
+for auth_contract in \
+  'normalizeExecuteApiToken' \
+  'hasValidExecuteAuthorization' \
+  'res.setHeader("WWW-Authenticate", "Bearer")' \
+  'error: "Unauthorized"'; do
+  if ! grep -Fq "$auth_contract" "$API"; then
+    printf '%s\n' "Execute API must retain bearer authentication contract: $auth_contract" >&2
+    exit 1
+  fi
+done
+
+for auth_test_contract in \
+  'Execute API authentication is not configured' \
+  'Bearer wrong-token' \
+  'Bearer test-execute-token extra' \
+  'unauthorizedResponse.statusCode, 401' \
+  'authorizedResponse.statusCode, 400'; do
+  if ! grep -Fq "$auth_test_contract" "$PARSER_TEST"; then
+    printf '%s\n' "Execute parser tests must retain bearer authentication case: $auth_test_contract" >&2
+    exit 1
+  fi
+done
+
+for guidance_file in "$README" "$ROOT_DIR/SECURITY.md" "$VISION" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq 'EXECUTE_API_TOKEN' "$guidance_file"; then
+    printf '%s\n' "Project guidance must document execute bearer authentication: $guidance_file" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "rejects multi-value Content-Type headers" "$README" ||
   ! grep -Fq "Ambiguous multi-value Content-Type headers" "$ROOT_DIR/SECURITY.md" ||
@@ -908,13 +946,14 @@ import sys
 
 source = Path(sys.argv[1]).read_text(encoding="utf-8")
 handler = source.split("export default async function handler(", 1)[1]
+authentication = "if (!hasValidExecuteAuthorization(req.headers.authorization, executeApiToken)) {"
 content_type = 'if (!hasJsonContentType(req.headers["content-type"])) {'
 body = "const body = normalizeExecuteBody(req.body);"
 capacity = "if (enforceExecuteRateLimit(res)) {"
-if not all(token in handler for token in (content_type, body, capacity)):
-    raise SystemExit("Execute handler must retain Content-Type, body, and capacity boundaries.")
-if not handler.index(content_type) < handler.index(body) < handler.index(capacity):
-    raise SystemExit("Execute Content-Type parameters must be rejected before body and capacity checks.")
+if not all(token in handler for token in (authentication, content_type, body, capacity)):
+    raise SystemExit("Execute handler must retain authentication, Content-Type, body, and capacity boundaries.")
+if not handler.index(authentication) < handler.index(content_type) < handler.index(body) < handler.index(capacity):
+    raise SystemExit("Execute authentication must pass before Content-Type, body, and capacity checks.")
 PY
 
 for guidance_file in "$README" "$ROOT_DIR/SECURITY.md" "$VISION" "$ROOT_DIR/CHANGES.md"; do

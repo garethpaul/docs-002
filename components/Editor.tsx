@@ -54,6 +54,7 @@ main();`;
 
 export default function Editor() {
   const [codeContent, setCodeContent] = useState(pyLang);
+  const [executeToken, setExecuteToken] = useState("");
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,6 +68,7 @@ export default function Editor() {
       const res = await fetch("/api/execute/code", {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${executeToken.trim()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ code: codeContent }),
@@ -94,12 +96,22 @@ export default function Editor() {
           setCodeContent(value);
         }}
       />
-      <div style={{ width: "100px", padding: "10px" }}>
+      <div className={styles.controls}>
+        <label className={styles.tokenLabel}>
+          Execute token
+          <input
+            className={styles.tokenInput}
+            type="password"
+            autoComplete="off"
+            value={executeToken}
+            onChange={(event) => setExecuteToken(event.target.value)}
+          />
+        </label>
         {/* have the button make a call to the fetchCode function */}
         <Button
           onClick={fetchCode}
           style={{ backgroundColor: "#0CA37F", color: "#fff" }}
-          disabled={loading}
+          disabled={loading || executeToken.trim() === ""}
         >
           {loading ? (
             // Spinner SVG or another spinner component

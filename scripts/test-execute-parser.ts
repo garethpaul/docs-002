@@ -63,6 +63,86 @@ assert.equal(normalizeOpenAIApiKey(""), null);
 assert.equal(normalizeOpenAIApiKey("   "), null);
 assert.equal(normalizeOpenAIApiKey("  test-api-key  "), "test-api-key");
 
+const originalExecuteToken = process.env.EXECUTE_API_TOKEN;
+const originalExecuteEnabledForAuth = process.env.DOCS_EXECUTE_ENABLED;
+try {
+  process.env.DOCS_EXECUTE_ENABLED = "true";
+  for (const configuredToken of [undefined, "   "] as const) {
+    if (configuredToken === undefined) {
+      delete process.env.EXECUTE_API_TOKEN;
+    } else {
+      process.env.EXECUTE_API_TOKEN = configuredToken;
+    }
+
+    const missingTokenConfigurationResponse = createTestResponse();
+    void executeHandler(
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: {},
+      } as NextApiRequest,
+      missingTokenConfigurationResponse as unknown as NextApiResponse,
+    );
+    assert.equal(missingTokenConfigurationResponse.statusCode, 503);
+    assert.deepEqual(missingTokenConfigurationResponse.body, {
+      error: "Execute API authentication is not configured",
+    });
+  }
+
+  process.env.EXECUTE_API_TOKEN = "test-execute-token";
+  for (const authorization of [
+    undefined,
+    "Basic test-execute-token",
+    "Bearer wrong-token",
+    "Bearer test-execute-token extra",
+    ["Bearer test-execute-token"],
+  ] as const) {
+    const unauthorizedResponse = createTestResponse();
+    void executeHandler(
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(authorization === undefined ? {} : { authorization }),
+        },
+        body: {},
+      } as NextApiRequest,
+      unauthorizedResponse as unknown as NextApiResponse,
+    );
+    assert.equal(unauthorizedResponse.statusCode, 401);
+    assert.equal(unauthorizedResponse.headers["WWW-Authenticate"], "Bearer");
+    assert.deepEqual(unauthorizedResponse.body, { error: "Unauthorized" });
+  }
+
+  const authorizedResponse = createTestResponse();
+  void executeHandler(
+    {
+      method: "POST",
+      headers: {
+        authorization: "bearer test-execute-token",
+        "content-type": "application/json",
+      },
+      body: {},
+    } as NextApiRequest,
+    authorizedResponse as unknown as NextApiResponse,
+  );
+  assert.equal(authorizedResponse.statusCode, 400);
+  assert.deepEqual(authorizedResponse.body, {
+    error: "Request body must include only a code string",
+  });
+} finally {
+  if (originalExecuteToken === undefined) {
+    delete process.env.EXECUTE_API_TOKEN;
+  } else {
+    process.env.EXECUTE_API_TOKEN = originalExecuteToken;
+  }
+  if (originalExecuteEnabledForAuth === undefined) {
+    delete process.env.DOCS_EXECUTE_ENABLED;
+  } else {
+    process.env.DOCS_EXECUTE_ENABLED = originalExecuteEnabledForAuth;
+  }
+}
+
 const consumeCapacity = createFixedWindowRateLimiter(
   EXECUTE_RATE_LIMIT_MAX_REQUESTS,
   EXECUTE_RATE_LIMIT_WINDOW_MS,
@@ -99,6 +179,7 @@ assert.deepEqual(limitedResponse.body, { error: "Execute API request limit excee
 const originalExecuteEnabled = process.env.DOCS_EXECUTE_ENABLED;
 try {
   process.env.DOCS_EXECUTE_ENABLED = "true";
+  process.env.EXECUTE_API_TOKEN = "test-execute-token";
   const currentWindow = Date.now();
   for (let request = 0; request < EXECUTE_RATE_LIMIT_MAX_REQUESTS; request += 1) {
     enforceExecuteRateLimit(
@@ -111,7 +192,10 @@ try {
   void executeHandler(
     {
       method: "POST",
-      headers: { "content-type": "text/plain" },
+      headers: {
+        authorization: "Bearer test-execute-token",
+        "content-type": "text/plain",
+      },
       body: { code: "const invalid = true;" },
     } as NextApiRequest,
     invalidContentTypeResponse as unknown as NextApiResponse,
@@ -125,7 +209,10 @@ try {
   void executeHandler(
     {
       method: "POST",
-      headers: { "content-type": "application/json; charset=latin1" },
+      headers: {
+        authorization: "Bearer test-execute-token",
+        "content-type": "application/json; charset=latin1",
+      },
       body: { code: "const invalid = true;" },
     } as NextApiRequest,
     invalidParameterizedContentTypeResponse as unknown as NextApiResponse,
@@ -140,7 +227,10 @@ try {
   void executeHandler(
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        authorization: "Bearer test-execute-token",
+        "content-type": "application/json",
+      },
       body: {
         code: `await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -160,7 +250,10 @@ try {
   void executeHandler(
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        authorization: "Bearer test-execute-token",
+        "content-type": "application/json",
+      },
       body: {
         code: `await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -179,6 +272,11 @@ try {
     delete process.env.DOCS_EXECUTE_ENABLED;
   } else {
     process.env.DOCS_EXECUTE_ENABLED = originalExecuteEnabled;
+  }
+  if (originalExecuteToken === undefined) {
+    delete process.env.EXECUTE_API_TOKEN;
+  } else {
+    process.env.EXECUTE_API_TOKEN = originalExecuteToken;
   }
   if (originalApiKey === undefined) {
     delete process.env.OPENAI_API_KEY;

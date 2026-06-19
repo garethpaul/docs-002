@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 import type {
@@ -414,6 +415,38 @@ export function normalizeOpenAIApiKey(value: unknown = process.env.OPENAI_API_KE
   return value.trim() || null;
 }
 
+export function normalizeExecuteApiToken(value: unknown = process.env.EXECUTE_API_TOKEN) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
+function bearerToken(value: HeaderValue) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return /^Bearer ([^\s,]+)$/i.exec(value)?.[1] ?? null;
+}
+
+function safeTokenEqual(providedToken: string, expectedToken: string) {
+  const providedDigest = createHash("sha256").update(providedToken).digest();
+  const expectedDigest = createHash("sha256").update(expectedToken).digest();
+  return timingSafeEqual(providedDigest, expectedDigest);
+}
+
+export function hasValidExecuteAuthorization(
+  authorization: HeaderValue,
+  expectedToken = normalizeExecuteApiToken(),
+) {
+  const providedToken = bearerToken(authorization);
+  return Boolean(
+    expectedToken && providedToken && safeTokenEqual(providedToken, expectedToken),
+  );
+}
+
 export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return null;
@@ -641,6 +674,16 @@ export default async function handler(
 
   if (!isExecuteApiEnabled()) {
     return res.status(503).json({ error: "Execute API is disabled" });
+  }
+
+  const executeApiToken = normalizeExecuteApiToken();
+  if (!executeApiToken) {
+    return res.status(503).json({ error: "Execute API authentication is not configured" });
+  }
+
+  if (!hasValidExecuteAuthorization(req.headers.authorization, executeApiToken)) {
+    res.setHeader("WWW-Authenticate", "Bearer");
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   if (!hasJsonContentType(req.headers["content-type"])) {

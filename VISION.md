@@ -48,7 +48,8 @@ Current baseline:
   when maintainers need a narrower model allow-list. Environment configuration
   cannot expand beyond the checked-in default model set.
 - `DOCS_EXECUTE_ENABLED=true` is required before any provider request can run;
-  public deployments still need upstream authentication and rate limiting.
+  enabled requests also require an exact `EXECUTE_API_TOKEN` bearer credential
+  before parsing or provider setup.
 - Enabled provider calls use a 30-second timeout with SDK retries disabled.
 - Consume execute capacity only after local validation and configuration, but
   before provider setup; require shared upstream enforcement for public
@@ -59,7 +60,8 @@ Current baseline:
 - Execute API responses use `Cache-Control: no-store` to avoid intentionally
   caching submitted code, provider output, or errors.
 - The editor sends the current code string directly and avoids logging prompt
-  content, parsed parameters, or provider responses.
+- The editor accepts the caller's execute token as a password field, sends it
+  only in the request Authorization header, and does not persist it.
 - Keep exact-head browser, deployment, and provider evidence sanitized and
   separate from portable package verification.
 

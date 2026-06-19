@@ -6,7 +6,7 @@
     height: 15px;
     animation: spin 1s linear infinite;
   }
-  
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -14,6 +14,27 @@
 
 .CodeMirror-cursor {
     animation: blink 1s infinite;
+}
+
+.controls {
+    padding: 10px;
+}
+
+.tokenLabel {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 10px;
+    color: #202123;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.tokenInput {
+    width: min(320px, 80vw);
+    border: 1px solid #8a9199;
+    border-radius: 4px;
+    padding: 8px;
+    font: inherit;
 }
 
 @keyframes blink {
@@ -24,4 +45,3 @@
         opacity: 0;
     }
 }
-  

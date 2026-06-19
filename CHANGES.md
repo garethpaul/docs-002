@@ -1,5 +1,14 @@
 # Changes
 
+## 2026-06-19
+
+- Required a configured `EXECUTE_API_TOKEN` and exact bearer credential before
+  enabled execute requests can reach content parsing, rate limits, or OpenAI.
+- Added an in-memory editor token field and regression guards that prevent the
+  browser playground from silently bypassing or persisting the credential.
+- Restored structural checkout-workflow validation and hostile YAML fixtures
+  that downstream stacked branches had accidentally omitted.
+
 ## 2026-06-18
 
 - Refreshed six compatible direct dependencies while preserving Node 20,

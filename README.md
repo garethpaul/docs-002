@@ -43,6 +43,9 @@ npm ci
 export OPENAI_API_KEY=sk-...
 # Explicitly enable the spend-capable execute route for local testing.
 export DOCS_EXECUTE_ENABLED=true
+# Require callers to provide this generated secret in the editor or as a
+# bearer credential. Do not commit it.
+export EXECUTE_API_TOKEN=replace-with-a-generated-secret
 # Optional: comma-separated allow-list for proxied chat models.
 export OPENAI_ALLOWED_MODELS=gpt-4o-mini,gpt-3.5-turbo
 ```
@@ -56,7 +59,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 Detected npm scripts:
 
-- `npm run audit` - `npm audit --audit-level=high`
+- `npm run audit` - `npm audit --audit-level=moderate`
 - `npm run build` - `node node_modules/next/dist/bin/next build`
 - `npm run check` - `scripts/check-baseline.sh`
 - `npm run dev` - `node node_modules/next/dist/bin/next dev`
@@ -79,7 +82,9 @@ npm test
 TypeScript/TSX lint gate, TypeScript checks, focused execute parser/validator
 regression tests, the Next build, the source baseline guard, and
 `npm audit --audit-level=moderate`. The execute API remains disabled unless
-`DOCS_EXECUTE_ENABLED=true` and requires `OPENAI_API_KEY` at runtime. It accepts
+`DOCS_EXECUTE_ENABLED=true` and requires both `OPENAI_API_KEY` and a nonblank
+`EXECUTE_API_TOKEN` at runtime. Callers enter the token for the current editor
+session or send it as `Authorization: Bearer <token>`. The route accepts
 `Content-Type: application/json` requests only, rejects multi-value Content-Type
 headers, and validates submitted examples before calling the OpenAI SDK.
 Execute JSON Content-Type parameters accept only one UTF-8 charset declaration;
@@ -108,9 +113,11 @@ When the required SDK or runtime is unavailable, use static checks and source re
   OpenAI keys or sample outputs containing private prompt data. Leading and
   trailing whitespace is removed, and an empty result is rejected as missing.
 - `DOCS_EXECUTE_ENABLED` must be exactly `true` after whitespace and case
-  normalization before the spend-capable route is active. This is a deployment
-  safety interlock, not authentication; public deployments still require an
-  upstream authentication and rate-limiting layer.
+  normalization before the spend-capable route is active.
+- `EXECUTE_API_TOKEN` must be a nonblank server-side secret, and every enabled
+  request must present the exact value as a bearer token before content parsing,
+  request validation, rate-budget consumption, or provider setup. The editor
+  keeps the caller-supplied value only in component memory and does not persist it.
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only
