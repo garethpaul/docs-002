@@ -29,4 +29,8 @@ the pinned `tsx` dependency.
 - `npm ci` and `make check` passed from an external working directory.
 - `npm audit --audit-level=moderate` reported zero vulnerabilities.
 - Workflow, lockfile, and plan hostile mutations were rejected.
+- Structural workflow fixtures reject credential persistence hidden by decoy
+  values, comments, other steps, case-colliding inputs, duplicate checkouts,
+  aliases, custom or explicit standard tags, alternate workflow files, and
+  false-safe text.
 - `git diff --check` and shell syntax validation passed.
