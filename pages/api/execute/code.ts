@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 import type {
@@ -16,6 +17,7 @@ type JsonObject = { [key: string]: JsonValue };
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 type HeaderValue = string | string[] | undefined;
 type ExecuteBody = { code: string };
+type RateLimitDecision = { allowed: boolean; retryAfterSeconds: number };
 type ChatCompletionParams = {
   model: string;
   messages: ChatMessage[];
@@ -34,6 +36,9 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CONTENT_LENGTH = 8000;
 const MAX_COMPLETION_TOKENS = 2048;
 const DEFAULT_COMPLETION_TOKENS = 512;
+export const EXECUTE_RATE_LIMIT_MAX_REQUESTS = 10;
+export const EXECUTE_RATE_LIMIT_WINDOW_MS = 60_000;
+export const EXECUTE_CACHE_CONTROL = "no-store";
 export const OPENAI_REQUEST_OPTIONS = Object.freeze({ timeout: 30_000, maxRetries: 0 });
 const ALLOWED_MESSAGE_ROLES = new Set(["system", "user", "assistant"]);
 const ALLOWED_BODY_FIELDS = new Set(["code"]);
@@ -50,6 +55,7 @@ const ALLOWED_PARAMETER_NAMES = new Set([
   "response_format",
 ]);
 const DEFAULT_ALLOWED_MODELS = ["gpt-3.5-turbo", "gpt-4o-mini"];
+const HTTP_TOKEN_CHARACTER = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]$/;
 
 export const config = {
   api: {
@@ -58,6 +64,61 @@ export const config = {
     },
   },
 };
+
+export function createFixedWindowRateLimiter(maxRequests: number, windowMs: number) {
+  if (!Number.isInteger(maxRequests) || maxRequests <= 0) {
+    throw new TypeError("maxRequests must be a positive integer");
+  }
+  if (!Number.isInteger(windowMs) || windowMs <= 0) {
+    throw new TypeError("windowMs must be a positive integer");
+  }
+
+  let windowStartedAt: number | null = null;
+  let requestCount = 0;
+
+  return (now = Date.now()): RateLimitDecision => {
+    if (!Number.isFinite(now)) {
+      throw new TypeError("now must be finite");
+    }
+
+    if (
+      windowStartedAt === null ||
+      now < windowStartedAt ||
+      now - windowStartedAt >= windowMs
+    ) {
+      windowStartedAt = now;
+      requestCount = 0;
+    }
+
+    const remainingMs = Math.max(1, windowMs - (now - windowStartedAt));
+    const retryAfterSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+    if (requestCount >= maxRequests) {
+      return { allowed: false, retryAfterSeconds };
+    }
+
+    requestCount += 1;
+    return { allowed: true, retryAfterSeconds };
+  };
+}
+
+const consumeExecuteCapacity = createFixedWindowRateLimiter(
+  EXECUTE_RATE_LIMIT_MAX_REQUESTS,
+  EXECUTE_RATE_LIMIT_WINDOW_MS,
+);
+
+export function enforceExecuteRateLimit(
+  res: NextApiResponse<unknown | ErrorResponse>,
+  now = Date.now(),
+) {
+  const rateLimit = consumeExecuteCapacity(now);
+  if (rateLimit.allowed) {
+    return false;
+  }
+
+  res.setHeader("Retry-After", String(rateLimit.retryAfterSeconds));
+  res.status(429).json({ error: "Execute API request limit exceeded" });
+  return true;
+}
 
 function isNamedMember(expression: unknown, propertyName: string): expression is MemberExpression {
   const member = expression as MemberExpression;
@@ -207,30 +268,183 @@ export function extractParameters(code: string): JsonObject | null {
 
 function allowedModels() {
   const defaultAllowedModels = new Set(DEFAULT_ALLOWED_MODELS);
-  const configuredModels = process.env.OPENAI_ALLOWED_MODELS?.split(",")
-    .map((model) => model.trim())
-    .filter(Boolean);
-
-  if (!configuredModels?.length) {
+  const configuredModelList = process.env.OPENAI_ALLOWED_MODELS;
+  if (configuredModelList === undefined) {
     return defaultAllowedModels;
   }
+
+  const configuredModels = configuredModelList
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
 
   return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)));
 }
 
-export function hasJsonContentType(contentType: HeaderValue): boolean {
-  if (Array.isArray(contentType)) {
-    return contentType.some(hasJsonContentType);
+function isHttpTokenCharacter(character: string) {
+  return HTTP_TOKEN_CHARACTER.test(character);
+}
+
+function skipHttpWhitespace(value: string, start: number) {
+  let index = start;
+  while (value[index] === " " || value[index] === "\t") {
+    index += 1;
+  }
+  return index;
+}
+
+function readHttpToken(value: string, start: number): [string, number] | null {
+  let index = start;
+  while (index < value.length && isHttpTokenCharacter(value[index])) {
+    index += 1;
+  }
+  return index === start ? null : [value.slice(start, index), index];
+}
+
+function readHttpQuotedString(value: string, start: number): [string, number] | null {
+  if (value[start] !== '"') {
+    return null;
   }
 
-  return (
-    typeof contentType === "string" &&
-    contentType.split(";")[0].trim().toLowerCase() === "application/json"
-  );
+  let decoded = "";
+  for (let index = start + 1; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === '"') {
+      return [decoded, index + 1];
+    }
+
+    if (character === "\\") {
+      index += 1;
+      if (index >= value.length) {
+        return null;
+      }
+      const escaped = value[index];
+      const escapedCode = escaped.charCodeAt(0);
+      if (escapedCode < 0x20 || escapedCode > 0x7e) {
+        return null;
+      }
+      decoded += escaped;
+      continue;
+    }
+
+    const characterCode = character.charCodeAt(0);
+    if (characterCode < 0x20 || characterCode === 0x7f) {
+      return null;
+    }
+    decoded += character;
+  }
+
+  return null;
+}
+
+export function hasJsonContentType(contentType: HeaderValue): boolean {
+  if (typeof contentType !== "string") {
+    return false;
+  }
+
+  let index = skipHttpWhitespace(contentType, 0);
+  const type = readHttpToken(contentType, index);
+  if (!type || type[0].toLowerCase() !== "application") {
+    return false;
+  }
+
+  index = type[1];
+  if (contentType[index] !== "/") {
+    return false;
+  }
+
+  const subtype = readHttpToken(contentType, index + 1);
+  if (!subtype || subtype[0].toLowerCase() !== "json") {
+    return false;
+  }
+
+  index = skipHttpWhitespace(contentType, subtype[1]);
+  if (index === contentType.length) {
+    return true;
+  }
+
+  let charsetSeen = false;
+  while (index < contentType.length) {
+    if (contentType[index] !== ";") {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, index + 1);
+    const parameterName = readHttpToken(contentType, index);
+    if (!parameterName) {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, parameterName[1]);
+    if (contentType[index] !== "=") {
+      return false;
+    }
+
+    index = skipHttpWhitespace(contentType, index + 1);
+    const parameterValue =
+      contentType[index] === '"'
+        ? readHttpQuotedString(contentType, index)
+        : readHttpToken(contentType, index);
+    if (!parameterValue) {
+      return false;
+    }
+
+    if (
+      charsetSeen ||
+      parameterName[0].toLowerCase() !== "charset" ||
+      parameterValue[0].toLowerCase() !== "utf-8"
+    ) {
+      return false;
+    }
+    charsetSeen = true;
+    index = skipHttpWhitespace(contentType, parameterValue[1]);
+  }
+
+  return charsetSeen;
 }
 
 export function isExecuteApiEnabled(value = process.env.DOCS_EXECUTE_ENABLED): boolean {
   return typeof value === "string" && value.trim().toLowerCase() === "true";
+}
+
+export function normalizeOpenAIApiKey(value: unknown = process.env.OPENAI_API_KEY) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
+export function normalizeExecuteApiToken(value: unknown = process.env.EXECUTE_API_TOKEN) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
+function bearerToken(value: HeaderValue) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return /^Bearer ([^\s,]+)$/i.exec(value)?.[1] ?? null;
+}
+
+function safeTokenEqual(providedToken: string, expectedToken: string) {
+  const providedDigest = createHash("sha256").update(providedToken).digest();
+  const expectedDigest = createHash("sha256").update(expectedToken).digest();
+  return timingSafeEqual(providedDigest, expectedDigest);
+}
+
+export function hasValidExecuteAuthorization(
+  authorization: HeaderValue,
+  expectedToken = normalizeExecuteApiToken(),
+) {
+  const providedToken = bearerToken(authorization);
+  return Boolean(
+    expectedToken && providedToken && safeTokenEqual(providedToken, expectedToken),
+  );
 }
 
 export function normalizeExecuteBody(body: unknown): ExecuteBody | null {
@@ -265,6 +479,27 @@ function numberInRange(
   return value;
 }
 
+function hasWellFormedUtf16(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (
+        index + 1 >= value.length ||
+        nextCodeUnit < 0xdc00 ||
+        nextCodeUnit > 0xdfff
+      ) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MESSAGES) {
     return null;
@@ -293,6 +528,8 @@ function normalizeMessages(value: JsonValue | undefined): ChatMessage[] | null {
       !ALLOWED_MESSAGE_ROLES.has(role) ||
       typeof content !== "string" ||
       content.length === 0 ||
+      content.trim().length === 0 ||
+      !hasWellFormedUtf16(content) ||
       content.length > MAX_MESSAGE_CONTENT_LENGTH
     ) {
       return null;
@@ -313,14 +550,25 @@ function normalizeStop(value: JsonValue | undefined) {
   if (value === undefined) {
     return undefined;
   }
-  if (typeof value === "string" && value.length > 0 && value.length <= 100) {
+  if (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 100 &&
+    hasWellFormedUtf16(value)
+  ) {
     return value;
   }
   if (
     Array.isArray(value) &&
     value.length > 0 &&
     value.length <= 4 &&
-    value.every((entry) => typeof entry === "string" && entry.length > 0 && entry.length <= 100)
+    value.every(
+      (entry) =>
+        typeof entry === "string" &&
+        entry.length > 0 &&
+        entry.length <= 100 &&
+        hasWellFormedUtf16(entry),
+    )
   ) {
     return value as string[];
   }
@@ -417,6 +665,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<unknown | ErrorResponse>,
 ) {
+  res.setHeader("Cache-Control", EXECUTE_CACHE_CONTROL);
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
@@ -424,6 +674,16 @@ export default async function handler(
 
   if (!isExecuteApiEnabled()) {
     return res.status(503).json({ error: "Execute API is disabled" });
+  }
+
+  const executeApiToken = normalizeExecuteApiToken();
+  if (!executeApiToken) {
+    return res.status(503).json({ error: "Execute API authentication is not configured" });
+  }
+
+  if (!hasValidExecuteAuthorization(req.headers.authorization, executeApiToken)) {
+    res.setHeader("WWW-Authenticate", "Bearer");
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   if (!hasJsonContentType(req.headers["content-type"])) {
@@ -446,12 +706,17 @@ export default async function handler(
     });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = normalizeOpenAIApiKey();
+  if (!apiKey) {
     return res.status(503).json({ error: "OPENAI_API_KEY is not configured" });
   }
 
+  if (enforceExecuteRateLimit(res)) {
+    return;
+  }
+
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create(
       params as ChatCompletionCreateParamsNonStreaming,
       OPENAI_REQUEST_OPTIONS,

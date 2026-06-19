@@ -22,6 +22,7 @@ Priority:
 - Keep `npm run dev`, `npm run lint`, `npm run build`, `npm run type-check`,
   and `npm test` meaningful
 - Keep GitHub Actions aligned with the local npm `make check` baseline
+- Keep a credential-free checkout and audited lockfile in GitHub Actions
 - Avoid committing API keys or proxy secrets
 - Keep the spend-capable execute route disabled unless deployment explicitly
   enables it
@@ -34,6 +35,10 @@ Current baseline:
 - Execute API request bodies may only contain the submitted `code` string.
 - Chat messages may only include `role` and `content` so metadata is not
   accepted and then silently dropped.
+- Reject whitespace-only chat message content before provider eligibility.
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
+- Lone UTF-16 surrogates in execute stop sequences are rejected; valid surrogate pairs and whitespace sequences remain accepted unchanged.
+- Execute JSON Content-Type parameters accept only one UTF-8 charset declaration; malformed, duplicate, unsupported, and unrelated parameters are rejected before body validation.
 - Execute request, parameter, and message normalization requires own fields
   before reading accepted values.
 - Extracted literal objects preserve prototype keys as own fields before
@@ -43,10 +48,22 @@ Current baseline:
   when maintainers need a narrower model allow-list. Environment configuration
   cannot expand beyond the checked-in default model set.
 - `DOCS_EXECUTE_ENABLED=true` is required before any provider request can run;
-  public deployments still need upstream authentication and rate limiting.
+  enabled requests also require an exact `EXECUTE_API_TOKEN` bearer credential
+  before parsing or provider setup.
 - Enabled provider calls use a 30-second timeout with SDK retries disabled.
+- Consume execute capacity only after local validation and configuration, but
+  before provider setup; require shared upstream enforcement for public
+  multi-instance deployments.
+- Reject blank OpenAI API keys before execute capacity consumption.
+- Fail closed for explicitly empty model allowlists.
+- Reject ambiguous multi-value content types before execute body parsing.
+- Execute API responses use `Cache-Control: no-store` to avoid intentionally
+  caching submitted code, provider output, or errors.
 - The editor sends the current code string directly and avoids logging prompt
-  content, parsed parameters, or provider responses.
+- The editor accepts the caller's execute token as a password field, sends it
+  only in the request Authorization header, and does not persist it.
+- Keep exact-head browser, deployment, and provider evidence sanitized and
+  separate from portable package verification.
 
 Next priorities:
 

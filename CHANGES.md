@@ -1,7 +1,55 @@
 # Changes
 
+## 2026-06-19
+
+- Required a configured `EXECUTE_API_TOKEN` and exact bearer credential before
+  enabled execute requests can reach content parsing, rate limits, or OpenAI.
+- Added an in-memory editor token field and regression guards that prevent the
+  browser playground from silently bypassing or persisting the credential.
+- Restored structural checkout-workflow validation and hostile YAML fixtures
+  that downstream stacked branches had accidentally omitted.
+
+## 2026-06-18
+
+- Refreshed six compatible direct dependencies while preserving Node 20,
+  TypeScript 5.9, the patched esbuild resolution, and the complete production
+  verification gate.
+
+## 2026-06-16
+
+- Execute JSON Content-Type parameters accept only one UTF-8 charset declaration; malformed, duplicate, unsupported, and unrelated parameters are rejected before body validation.
+
+## 2026-06-15
+
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
+- Lone UTF-16 surrogates in execute stop sequences are rejected; valid surrogate pairs and whitespace sequences remain accepted unchanged.
+- Rejected whitespace-only execute message content before provider capacity
+  consumption while preserving accepted content unchanged.
+- Made explicitly empty model allowlists fail closed instead of restoring
+  built-in defaults.
+- Rejected whitespace-only OpenAI API keys before execute capacity consumption.
+
+## 2026-06-14
+
+- Added an exact-head execute integration verification matrix that separates
+  portable package checks from sanitized browser, deployment, and provider
+  evidence.
+
+## 2026-06-13
+
+- Moved execute capacity consumption after local validation and API-key checks
+  so invalid requests cannot exhaust provider-eligible request slots.
+- Rejected ambiguous multi-value Content-Type headers before execute request
+  body normalization while preserving single JSON values with parameters.
+- Added a process-local fixed-window execute budget that rejects excess
+  provider-eligible attempts with `429` and `Retry-After` before provider setup.
+- Added a tested `Cache-Control: no-store` policy to every execute API response
+  so code, model output, and route errors are not intentionally cached.
+
 ## 2026-06-12
 
+- Stopped checkout credential persistence and updated the transitive `esbuild`
+  lockfile resolution from vulnerable 0.28.0 to patched 0.28.1.
 - Bounded enabled OpenAI execute requests to 30 seconds and disabled automatic
   SDK retries so one interactive request has a predictable provider window.
 - Added an immutable, executable request-options contract and baseline guard.

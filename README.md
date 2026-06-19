@@ -43,6 +43,9 @@ npm ci
 export OPENAI_API_KEY=sk-...
 # Explicitly enable the spend-capable execute route for local testing.
 export DOCS_EXECUTE_ENABLED=true
+# Require callers to provide this generated secret in the editor or as a
+# bearer credential. Do not commit it.
+export EXECUTE_API_TOKEN=replace-with-a-generated-secret
 # Optional: comma-separated allow-list for proxied chat models.
 export OPENAI_ALLOWED_MODELS=gpt-4o-mini,gpt-3.5-turbo
 ```
@@ -56,7 +59,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 Detected npm scripts:
 
-- `npm run audit` - `npm audit --audit-level=high`
+- `npm run audit` - `npm audit --audit-level=moderate`
 - `npm run build` - `node node_modules/next/dist/bin/next build`
 - `npm run check` - `scripts/check-baseline.sh`
 - `npm run dev` - `node node_modules/next/dist/bin/next dev`
@@ -79,13 +82,27 @@ npm test
 TypeScript/TSX lint gate, TypeScript checks, focused execute parser/validator
 regression tests, the Next build, the source baseline guard, and
 `npm audit --audit-level=moderate`. The execute API remains disabled unless
-`DOCS_EXECUTE_ENABLED=true` and requires `OPENAI_API_KEY` at runtime. It accepts
-`Content-Type: application/json` requests only and validates
-submitted examples before calling the OpenAI SDK. Request bodies may only contain a `code` string. Chat message objects may only contain `role` and `content`.
+`DOCS_EXECUTE_ENABLED=true` and requires both `OPENAI_API_KEY` and a nonblank
+`EXECUTE_API_TOKEN` at runtime. Callers enter the token for the current editor
+session or send it as `Authorization: Bearer <token>`. The route accepts
+`Content-Type: application/json` requests only, rejects multi-value Content-Type
+headers, and validates submitted examples before calling the OpenAI SDK.
+Execute JSON Content-Type parameters accept only one UTF-8 charset declaration;
+malformed, duplicate, unsupported, and unrelated parameters are rejected before
+body validation.
+Request bodies may only contain a `code` string. Chat message objects may only
+contain `role` and `content`.
+Every execute API response sets `Cache-Control: no-store` so submitted code,
+provider output, and route errors are not intentionally retained by shared or
+browser caches.
+Whitespace-only OpenAI API keys are treated as missing before execute capacity
+is consumed or the provider client is constructed.
 GitHub Actions installs dependencies with `npm ci` and runs `make check` on
 Node 20, 22, and 24 on Ubuntu 24.04 for pushes, pull requests, and manual dispatches. The
 workflow uses commit-pinned actions, read-only repository access, and a bounded
-runtime.
+runtime. It does not persist checkout credentials after source retrieval. The
+lockfile retains `esbuild 0.28.1` for the `tsx` test runner so the audit gate
+rejects the vulnerable 0.28.0 resolution.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -93,17 +110,25 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 - Detected references to OpenAI. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
 - `OPENAI_API_KEY` must be provided through the environment. Do not commit
-  OpenAI keys or sample outputs containing private prompt data.
+  OpenAI keys or sample outputs containing private prompt data. Leading and
+  trailing whitespace is removed, and an empty result is rejected as missing.
 - `DOCS_EXECUTE_ENABLED` must be exactly `true` after whitespace and case
-  normalization before the spend-capable route is active. This is a deployment
-  safety interlock, not authentication; public deployments still require an
-  upstream authentication and rate-limiting layer.
+  normalization before the spend-capable route is active.
+- `EXECUTE_API_TOKEN` must be a nonblank server-side secret, and every enabled
+  request must present the exact value as a bearer token before content parsing,
+  request validation, rate-budget consumption, or provider setup. The editor
+  keeps the caller-supplied value only in component memory and does not persist it.
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only
-  accepts the checked-in defaults.
+  accepts the checked-in defaults. Explicitly blank or comma-only configuration
+  allows no models instead of reopening those defaults.
 - Submitted chat messages are normalized to `role` and `content` only; message
   metadata fields are rejected instead of silently dropped.
+- Whitespace-only chat message content is rejected before provider eligibility;
+  accepted nonblank content retains its original leading and trailing spacing.
+- Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
+- Lone UTF-16 surrogates in execute stop sequences are rejected; valid surrogate pairs and whitespace sequences remain accepted unchanged.
 - Execute API request bodies are limited to the `code` field; extra fields such
   as credentials or metadata are rejected before code parsing.
 - Extracted parameter and message objects preserve prototype-pollution keys as
@@ -114,6 +139,15 @@ When the required SDK or runtime is unavailable, use static checks and source re
   before reading `code`, `model`, `messages`, `role`, or `content`.
 - Enabled provider calls use a fixed 30-second timeout with SDK retries disabled
   so one interactive request has a bounded OpenAI attempt.
+- Provider-eligible requests consume the process-local budget only after
+  Content-Type, body, code, parameter, and API-key validation. Ten eligible
+  attempts per process per minute are admitted; exhausted windows return `429`
+  with `Retry-After` before provider client construction. Multi-instance
+  deployments still require an upstream shared limiter.
+- Execute API responses use `Cache-Control: no-store` so code, model output,
+  and errors are not intentionally cached.
+- Execute content-type validation rejects multi-value Content-Type headers to
+  avoid ambiguous request interpretation before body normalization.
 
 ## Security and Privacy Notes
 
@@ -148,6 +182,17 @@ When the required SDK or runtime is unavailable, use static checks and source re
   execute route deployment interlock.
 - See `docs/plans/2026-06-12-openai-request-timeout.md` for the bounded OpenAI
   provider-call contract.
+- See `docs/plans/2026-06-12-checkout-credential-and-esbuild-boundary.md` for
+  checkout token isolation and the patched test-runner dependency resolution.
+- See `docs/plans/2026-06-13-execute-api-no-store.md` for the execute response
+  cache boundary.
+- See `docs/plans/2026-06-13-execute-fixed-window-budget.md` for the process-local
+  execute request budget.
+- See `docs/plans/2026-06-13-provider-eligible-execute-budget.md` for local
+  validation ordering before execute capacity consumption.
+- Use [`INTEGRATION_VERIFICATION.md`](INTEGRATION_VERIFICATION.md) for
+  exact-head browser, deployed route, deployment edge, and provider evidence.
+  It requires isolated synthetic requests and sanitized outcomes.
 
 ## Contributing
 
