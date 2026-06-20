@@ -744,10 +744,13 @@ for auth_contract in \
   fi
 done
 
-if grep -Fq 'createHash' "$API" ||
-  ! grep -Fq 'Buffer.from(providedToken, "utf8")' "$API" ||
-  ! grep -Fq 'Buffer.from(expectedToken, "utf8")' "$API"; then
-  printf '%s\n' "Execute bearer authentication must compare token bytes without fast password hashing." >&2
+if grep -Eq 'create(Hash|Hmac)' "$API" ||
+  grep -Eq 'provided(Token|Bytes|Digest)\.length.*expected(Token|Bytes|Digest)\.length' "$API" ||
+  ! grep -Fq 'const MAX_EXECUTE_TOKEN_BYTES = 1024;' "$API" ||
+  ! grep -Fq 'function hasWellFormedUnicode(value: string)' "$API" ||
+  ! grep -Fq 'Buffer.alloc(MAX_EXECUTE_TOKEN_BYTES + 4)' "$API" ||
+  ! grep -Fq 'timingSafeEqual(providedBuffer, expectedBuffer)' "$API"; then
+  printf '%s\n' "Execute bearer authentication must compare bounded fixed-size buffers without hashing or a token-length short circuit." >&2
   exit 1
 fi
 

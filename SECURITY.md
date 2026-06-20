@@ -36,7 +36,8 @@ Helpful reports include:
 - Enabled execute requests require a nonblank server-side `EXECUTE_API_TOKEN`
   and an exact caller-supplied bearer credential before request parsing or
   provider setup. Rotate or revoke the shared token through deployment secrets,
-  never source control or browser storage.
+  never source control or browser storage. Tokens must be well-formed Unicode
+  and no more than 1,024 UTF-8 bytes.
 - Enabled OpenAI calls use a 30-second timeout with automatic SDK retries
   disabled so one request cannot multiply provider attempts or run indefinitely.
 - A process-local fixed-window budget admits ten provider-eligible attempts per

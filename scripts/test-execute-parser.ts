@@ -67,8 +67,13 @@ assert.equal(normalizeOpenAIApiKey("  test-api-key  "), "test-api-key");
 assert.equal(hasValidExecuteAuthorization("Bearer exact-token", "exact-token"), true);
 assert.equal(hasValidExecuteAuthorization("Bearer wrong-token", "exact-token"), false);
 assert.equal(hasValidExecuteAuthorization("Bearer token", "longer-token"), false);
+assert.equal(hasValidExecuteAuthorization("", "exact-token"), false);
+assert.equal(hasValidExecuteAuthorization("Bearer exact-token", ""), false);
 assert.equal(hasValidExecuteAuthorization("Bearer påss-token", "påss-token"), true);
 assert.equal(hasValidExecuteAuthorization("Bearer pass-token", "påss-token"), false);
+assert.equal(hasValidExecuteAuthorization("Bearer e\u0301-token", "é-token"), false);
+assert.equal(hasValidExecuteAuthorization("Bearer \ud800-token", "\ud801-token"), false);
+assert.equal(hasValidExecuteAuthorization(`Bearer ${"a".repeat(1025)}`, "a".repeat(1025)), false);
 
 const originalExecuteToken = process.env.EXECUTE_API_TOKEN;
 const originalExecuteEnabledForAuth = process.env.DOCS_EXECUTE_ENABLED;
