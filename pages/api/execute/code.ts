@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 import type {
@@ -105,6 +105,7 @@ const consumeExecuteCapacity = createFixedWindowRateLimiter(
   EXECUTE_RATE_LIMIT_MAX_REQUESTS,
   EXECUTE_RATE_LIMIT_WINDOW_MS,
 );
+const MAX_EXECUTE_TOKEN_BYTES = 1024;
 
 export function enforceExecuteRateLimit(
   res: NextApiResponse<unknown | ErrorResponse>,
@@ -420,7 +421,8 @@ export function normalizeExecuteApiToken(value: unknown = process.env.EXECUTE_AP
     return null;
   }
 
-  return value.trim() || null;
+  const token = value.trim();
+  return token && tokenComparisonBuffer(token) ? token : null;
 }
 
 function bearerToken(value: HeaderValue) {
@@ -431,10 +433,42 @@ function bearerToken(value: HeaderValue) {
   return /^Bearer ([^\s,]+)$/i.exec(value)?.[1] ?? null;
 }
 
+function hasWellFormedUnicode(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (nextCodeUnit < 0xdc00 || nextCodeUnit > 0xdfff) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function tokenComparisonBuffer(token: string) {
+  if (!hasWellFormedUnicode(token)) {
+    return null;
+  }
+  const tokenBytes = Buffer.from(token, "utf8");
+  if (tokenBytes.length === 0 || tokenBytes.length > MAX_EXECUTE_TOKEN_BYTES) {
+    return null;
+  }
+  const comparisonBuffer = Buffer.alloc(MAX_EXECUTE_TOKEN_BYTES + 4);
+  comparisonBuffer.writeUInt32BE(tokenBytes.length, 0);
+  tokenBytes.copy(comparisonBuffer, 4);
+  return comparisonBuffer;
+}
+
 function safeTokenEqual(providedToken: string, expectedToken: string) {
-  const providedDigest = createHash("sha256").update(providedToken).digest();
-  const expectedDigest = createHash("sha256").update(expectedToken).digest();
-  return timingSafeEqual(providedDigest, expectedDigest);
+  const providedBuffer = tokenComparisonBuffer(providedToken);
+  const expectedBuffer = tokenComparisonBuffer(expectedToken);
+  return Boolean(
+    providedBuffer && expectedBuffer && timingSafeEqual(providedBuffer, expectedBuffer),
+  );
 }
 
 export function hasValidExecuteAuthorization(

@@ -118,6 +118,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   request must present the exact value as a bearer token before content parsing,
   request validation, rate-budget consumption, or provider setup. The editor
   keeps the caller-supplied value only in component memory and does not persist it.
+  Tokens must be well-formed Unicode and no more than 1,024 UTF-8 bytes.
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only

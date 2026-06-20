@@ -13,9 +13,11 @@ credential, so merging it would have broken the documented playground.
 
 Require a nonblank server-side `EXECUTE_API_TOKEN` and an exact caller-supplied
 bearer credential before content-type parsing, body validation, rate-budget
-consumption, or OpenAI client construction. Compare fixed-size SHA-256 digests
-with `timingSafeEqual`. Keep the editor token only in React component memory,
-submit it in the Authorization header, and never persist it.
+consumption, or OpenAI client construction. Encode valid tokens into bounded,
+fixed-size, length-prefixed buffers and compare them with `timingSafeEqual`
+without a token-length short circuit. Reject ill-formed Unicode and tokens over
+1,024 UTF-8 bytes. Keep the editor token only in React component memory, submit
+it in the Authorization header, and never persist it.
 
 A shared token is a deployment access gate, not identity-aware authorization.
 Scaled public deployments still need shared rate limiting and may require a
