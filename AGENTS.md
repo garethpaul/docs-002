@@ -43,6 +43,8 @@
 
 - Test-related files detected: `scripts/test-execute-parser.ts`
 - Start with the narrowest relevant test or Make target, then run `make check` before handing off if the change is not documentation-only.
+- Preserve the Make startup-file, later-file, mode, shell, npm, and root
+  authority contracts in `scripts/test-makefile-authority.sh`.
 - Keep README verification notes in sync when commands, fixtures, or supported toolchains change.
 
 ## PR / change guidance
@@ -60,6 +62,8 @@
 - Submitted chat messages are normalized to `role` and `content` only; message metadata fields are rejected instead of silently dropped.
 - Execute API request bodies are limited to the `code` field; extra fields such as credentials or metadata are rejected before code parsing.
 - Extracted parameter and message objects preserve prototype-pollution keys as own fields so the allow-lists reject them.
+- Repository verification rejects alternate Make graphs and caller-selected
+  execution commands before running the reviewed npm checks.
 
 ## Agent workflow
 
