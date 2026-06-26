@@ -39,7 +39,8 @@ verification.
   lint, TypeScript, parser tests, Next production builds, source baseline,
   zero-vulnerability audits, and checkout-workflow fixtures.
 - Absolute external-directory Make verification — passed on Node 20.20.2.
-- Hosted verification — pending.
+- Hosted Check runs `28266771914` and `28266772416`, CodeQL run
+  `28266772261`, and Vercel preview — passed on the initial PR head.
 
 ### Bugs / findings
 
@@ -50,10 +51,12 @@ verification.
 
 - The host login environment lacks Ruby; local workflow validation used the
   official Ruby 3.3 container while npm/Next ran on installed Node toolchains.
+- Codex review was attempted once and skipped after HTTP 401 authentication
+  failures, as permitted by the maintenance workflow.
 
 ### Next action
 
-- Open the PR and require all hosted Node and CodeQL checks on the exact head.
+- Merge only after all hosted checks pass on the exact final head.
 
 ## 2026-06-26 - P2 - Retire the legacy default chat model
 
