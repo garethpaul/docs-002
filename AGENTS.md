@@ -56,7 +56,7 @@
 
 - Detected references to OpenAI. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
 - `OPENAI_API_KEY` must be provided through the environment. Do not commit OpenAI keys or sample outputs containing private prompt data.
-- `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list. It can only narrow the checked-in default model allow-list; unsupported values are not allowed to expand the proxy. When unset, the execute API only accepts the checked-in defaults.
+- `OPENAI_ALLOWED_MODELS` can only narrow the checked-in `gpt-4o-mini` maximum; unsupported or legacy values must not expand the proxy.
 - Submitted chat messages are normalized to `role` and `content` only; message metadata fields are rejected instead of silently dropped.
 - Execute API request bodies are limited to the `code` field; extra fields such as credentials or metadata are rejected before code parsing.
 - Extracted parameter and message objects preserve prototype-pollution keys as own fields so the allow-lists reject them.

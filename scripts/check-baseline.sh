@@ -435,6 +435,14 @@ if ! grep -Fq "defaultAllowedModels.has(model)" "$API"; then
   exit 1
 fi
 
+if ! grep -Fq 'const DEFAULT_ALLOWED_MODELS = ["gpt-4o-mini"];' "$API" || \
+  grep -Fq 'gpt-3.5-turbo' "$API" || \
+  ! grep -Fq 'model: "gpt-3.5-turbo"' "$PARSER_TEST" || \
+  ! grep -Fq 'legacy `gpt-3.5-turbo` is not provider-eligible' "$ROOT_DIR/SECURITY.md"; then
+  printf '%s\n' "Execute API maximum model set must exclude legacy gpt-3.5-turbo." >&2
+  exit 1
+fi
+
 if ! grep -Fq 'const configuredModelList = process.env.OPENAI_ALLOWED_MODELS;' "$API" || \
   ! grep -Fq 'if (configuredModelList === undefined)' "$API" || \
   ! grep -Fq 'return new Set(configuredModels.filter((model) => defaultAllowedModels.has(model)))' "$API" || \

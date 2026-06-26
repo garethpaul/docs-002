@@ -568,6 +568,16 @@ assert.equal(
 assert.equal(
   parseAndNormalize(`
     await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: "Legacy model" }]
+    });
+  `),
+  null,
+);
+
+assert.equal(
+  parseAndNormalize(`
+    await openai.chat.completions.create({
       model: "not-allowed",
       messages: [{ role: "user", content: "Hello" }]
     });

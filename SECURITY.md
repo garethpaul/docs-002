@@ -48,7 +48,8 @@ Helpful reports include:
 - Whitespace-only OpenAI API keys must be rejected before execute capacity or
   provider setup.
 - Explicitly empty model allowlists must fail closed; built-in model defaults
-  apply only when `OPENAI_ALLOWED_MODELS` is absent.
+  apply only when `OPENAI_ALLOWED_MODELS` is absent. The maximum checked-in
+  set is `gpt-4o-mini`; legacy `gpt-3.5-turbo` is not provider-eligible.
 - Whitespace-only execute message content must be rejected before consuming
   provider capacity, without rewriting accepted nonblank content.
 - Lone UTF-16 surrogates in execute message content are rejected before provider eligibility; valid surrogate pairs remain accepted unchanged.
