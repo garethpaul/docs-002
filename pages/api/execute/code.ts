@@ -54,7 +54,7 @@ const ALLOWED_PARAMETER_NAMES = new Set([
   "stop",
   "response_format",
 ]);
-const DEFAULT_ALLOWED_MODELS = ["gpt-3.5-turbo", "gpt-4o-mini"];
+const DEFAULT_ALLOWED_MODELS = ["gpt-4o-mini"];
 const HTTP_TOKEN_CHARACTER = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]$/;
 
 export const config = {

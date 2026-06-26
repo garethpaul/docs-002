@@ -58,9 +58,9 @@ const IndexPage = () => (
           </p>
 
           <p>
-            Our latest models, gpt-4 and gpt-3.5-turbo, are accessed through the
-            chat completions API endpoint. Currently, only the older legacy
-            models are available via the completions API endpoint.
+            This prototype uses gpt-4o-mini through the Chat Completions API.
+            OpenAI recommends evaluating the Responses API for new projects,
+            while this bounded sample preserves its reviewed chat request shape.
           </p>
         </Flex>
       </Flex>

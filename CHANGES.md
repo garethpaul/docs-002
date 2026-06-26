@@ -1,5 +1,16 @@
 # Changes
 
+## 2026-06-26 - P2 - Retire the legacy default chat model
+
+- Narrowed the execute proxy's maximum model allow-list to `gpt-4o-mini`.
+- Rejected `gpt-3.5-turbo` even when `OPENAI_ALLOWED_MODELS` attempts to restore
+  it; deployment configuration can still only narrow the checked-in maximum.
+- Updated the visible prototype copy and security guidance to distinguish the
+  preserved Chat Completions sample from OpenAI's Responses recommendation for
+  new projects.
+- Added a failing-first parser assertion and static contracts for the narrowed
+  provider-eligibility boundary.
+
 ## 2026-06-19
 
 - Required a configured `EXECUTE_API_TOKEN` and exact bearer credential before

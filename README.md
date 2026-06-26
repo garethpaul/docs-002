@@ -46,8 +46,8 @@ export DOCS_EXECUTE_ENABLED=true
 # Require callers to provide this generated secret in the editor or as a
 # bearer credential. Do not commit it.
 export EXECUTE_API_TOKEN=replace-with-a-generated-secret
-# Optional: comma-separated allow-list for proxied chat models.
-export OPENAI_ALLOWED_MODELS=gpt-4o-mini,gpt-3.5-turbo
+# Optional: narrow the proxied chat model allow-list.
+export OPENAI_ALLOWED_MODELS=gpt-4o-mini
 ```
 
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
@@ -122,7 +122,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - `OPENAI_ALLOWED_MODELS` can narrow the comma-separated chat model allow-list.
   It can only narrow the checked-in default model allow-list; unsupported
   values are not allowed to expand the proxy. When unset, the execute API only
-  accepts the checked-in defaults. Explicitly blank or comma-only configuration
+  accepts `gpt-4o-mini`. Explicitly blank or comma-only configuration
   allows no models instead of reopening those defaults.
 - Submitted chat messages are normalized to `role` and `content` only; message
   metadata fields are rejected instead of silently dropped.

@@ -46,7 +46,7 @@ Current baseline:
 - Numeric execute parameters must be finite values before range checks pass.
 - Proxied requests require `OPENAI_API_KEY` and use `OPENAI_ALLOWED_MODELS`
   when maintainers need a narrower model allow-list. Environment configuration
-  cannot expand beyond the checked-in default model set.
+  cannot expand beyond the checked-in `gpt-4o-mini` maximum.
 - `DOCS_EXECUTE_ENABLED=true` is required before any provider request can run;
   enabled requests also require an exact `EXECUTE_API_TOKEN` bearer credential
   before parsing or provider setup.
