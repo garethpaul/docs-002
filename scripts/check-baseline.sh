@@ -28,6 +28,7 @@ EXECUTE_RATE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-execute-fixed-window-b
 SINGLE_CONTENT_TYPE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-single-json-content-type.md"
 PROVIDER_ELIGIBLE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-13-provider-eligible-execute-budget.md"
 MAKE_ROOT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-make-root-override-protection.md"
+MAKE_AUTHORITY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-make-invocation-authority.md"
 INTEGRATION_VERIFICATION="$ROOT_DIR/INTEGRATION_VERIFICATION.md"
 INTEGRATION_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-execute-integration-verification.md"
 NONBLANK_API_KEY_PLAN="$ROOT_DIR/docs/plans/2026-06-15-001-nonblank-openai-api-key.md"
@@ -62,6 +63,7 @@ for path in \
   "docs/plans/2026-06-08-docs-check-wrapper.md" \
   "docs/plans/2026-06-08-docs-execute-api-baseline.md" \
   "docs/plans/2026-06-08-docs-lint-gate.md" \
+  "docs/plans/2026-06-26-make-invocation-authority.md" \
   "docs/plans/2026-06-09-json-content-type-guard.md" \
   "docs/plans/2026-06-09-execute-body-field-allowlist.md" \
   "docs/plans/2026-06-09-message-field-allowlist.md" \
@@ -227,9 +229,20 @@ if ! grep -Fq "runs-on: ubuntu-24.04" "$CI_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fxq 'override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$MAKEFILE" ||
-  [ "$(grep -c '\$(NPM) --prefix \$(ROOT)' "$MAKEFILE")" -ne 4 ]; then
-  printf '%s\n' "Make targets must protect and use the repository root." >&2
+if ! grep -Fxq 'override REPOSITORY_MAKEFILE := $(value MAKEFILE_LIST)' "$MAKEFILE" || \
+  ! grep -Fxq 'override ROOT :=' "$MAKEFILE" || \
+  ! grep -Fq 'ROOT=$$(CDPATH= cd -- "$$repository_directory" && pwd -P)' "$MAKEFILE" || \
+  ! grep -Fq 'cd "$$ROOT" &&' "$MAKEFILE"; then
+  printf '%s\n' "Make targets must derive and quote the repository root inside guarded recipes." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'audit authority-test build check lint test test-checkout-workflow-policy verify:: __repository-make-authority' "$MAKEFILE" || \
+  ! grep -Fq 'multiple -f Makefiles are not supported' "$MAKEFILE" || \
+  ! grep -Fq 'non-executing or error-ignoring MAKEFLAGS are not supported' "$MAKEFILE" || \
+  ! grep -Fq '/bin/sh scripts/test-makefile-authority.sh' "$MAKEFILE" || \
+  [ ! -x "$ROOT_DIR/scripts/test-makefile-authority.sh" ]; then
+  printf '%s\n' "Makefile must preserve invocation authority and its causal regression suite." >&2
   exit 1
 fi
 
@@ -242,6 +255,17 @@ for make_root_plan_contract in \
   "Three isolated hostile assignment mutations were rejected"; do
   if ! grep -Fq "$make_root_plan_contract" "$MAKE_ROOT_PLAN"; then
     printf '%s\n' "Make-root plan must record completed evidence: $make_root_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for make_authority_plan_contract in \
+  "Status: Completed" \
+  "later single-colon Makefile" \
+  "24 causal authority cases" \
+  "make check"; do
+  if ! grep -Fq "$make_authority_plan_contract" "$MAKE_AUTHORITY_PLAN"; then
+    printf '%s\n' "Make authority plan must record completed evidence: $make_authority_plan_contract" >&2
     exit 1
   fi
 done
@@ -998,7 +1022,7 @@ for content_type_parameter_plan_contract in \
   fi
 done
 
-if ! grep -Fq "check: verify" "$ROOT_DIR/Makefile"; then
+if ! grep -Fq "check:: verify" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Makefile must expose make check as the repository verification wrapper." >&2
   exit 1
 fi

@@ -75,6 +75,7 @@ Run the local verification gate before changing the editor or execute API:
 
 ```bash
 make check
+sh scripts/test-makefile-authority.sh
 npm test
 ```
 
@@ -90,6 +91,11 @@ headers, and validates submitted examples before calling the OpenAI SDK.
 Execute JSON Content-Type parameters accept only one UTF-8 charset declaration;
 malformed, duplicate, unsupported, and unrelated parameters are rejected before
 body validation.
+The Make entry point rejects startup and later Makefiles, caller-selected flags,
+ten non-executing or error-ignoring modes, and shell/npm/root overrides before
+the reviewed graph runs. Its causal suite also verifies absolute external
+invocation and checkout paths containing spaces, quotes, brackets, and shell
+metacharacters.
 Request bodies may only contain a `code` string. Chat message objects may only
 contain `role` and `content`.
 Every execute API response sets `Cache-Control: no-store` so submitted code,

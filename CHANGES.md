@@ -1,5 +1,63 @@
 # Changes
 
+## 2026-06-26 14:36 PDT - P1 - Make verification invocation authoritative
+
+### Summary
+
+Closed a false-green boundary where a later Makefile or unsafe GNU Make mode
+could report a passing `check` without executing npm or checkout-workflow
+verification.
+
+### Work completed
+
+- Converted public verification targets to guarded double-colon rules.
+- Rejected startup/later Makefiles, caller invocation variables, and ten unsafe
+  Make modes.
+- Fixed shell, npm, and repository-root ownership in the reviewed graph.
+- Added 24 causal authority cases, external-root coverage, and hostile checkout
+  path coverage.
+
+### Threads
+
+- None; the focused Make, shell-test, baseline, and documentation work was
+  completed directly.
+
+### Files changed
+
+- `Makefile` — authoritative invocation and guarded repository recipes.
+- `scripts/test-makefile-authority.sh` — causal replacement, mode, override,
+  external-root, and hostile-path regressions.
+- `scripts/check-baseline.sh` — structural authority and plan contracts.
+- `README.md`, `VISION.md`, `AGENTS.md`,
+  `docs/plans/2026-06-26-make-invocation-authority.md` — public boundary and
+  verification evidence.
+
+### Validation
+
+- `/bin/sh scripts/test-makefile-authority.sh` — 24 authority cases passed.
+- Node 20.20.2, 22.16.0, and 24.17.0 `make check` — passed with
+  lint, TypeScript, parser tests, Next production builds, source baseline,
+  zero-vulnerability audits, and checkout-workflow fixtures.
+- Absolute external-directory Make verification — passed on Node 20.20.2.
+- Hosted Check runs `28266771914` and `28266772416`, CodeQL run
+  `28266772261`, and Vercel preview — passed on the initial PR head.
+
+### Bugs / findings
+
+- P1 fixed: a later single-colon Makefile replaced every verification leaf and
+  exited zero; `make -n check` also exited zero without running the graph.
+
+### Blockers
+
+- The host login environment lacks Ruby; local workflow validation used the
+  official Ruby 3.3 container while npm/Next ran on installed Node toolchains.
+- Codex review was attempted once and skipped after HTTP 401 authentication
+  failures, as permitted by the maintenance workflow.
+
+### Next action
+
+- Merge only after all hosted checks pass on the exact final head.
+
 ## 2026-06-26 - P2 - Retire the legacy default chat model
 
 - Narrowed the execute proxy's maximum model allow-list to `gpt-4o-mini`.
